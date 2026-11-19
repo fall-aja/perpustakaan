@@ -30,7 +30,7 @@ if($cek > 0){
     
     // cek jika user login sebagai admin
     if($level_bersih == "admin"){
-        header("Location: profile_admin.php");
+        header("Location: beranda.php");
         exit();
     }
     // cek jika user login sebagai anggota
@@ -39,11 +39,11 @@ if($cek > 0){
         exit();
     }
     else{
-        header("Location: index.php?pesan=gagal");
+        header("Location: masuk.php?pesan=gagal");
         exit();
     }
 }else{
-    header("Location: index.php?pesan=gagal");
+    header("Location: masuk.php?pesan=gagal");
     exit();
 }
 ?>

@@ -9,6 +9,8 @@ $conn = new mysqli("localhost", "root", "", "perpustakaan");
 if ($conn->connect_error) {
     die("Koneksi gagal: " . $conn->connect_error);
 }
+require_once 'helper_katalog.php';
+$menunggu_acc = $conn->query("SELECT COUNT(*) AS c FROM persetujuan WHERE status='menunggu'")->fetch_assoc()['c'] ?? 0;
 
 // ==================== HAPUS BUKU ====================
 if (isset($_GET['hapus'])) {
@@ -59,7 +61,7 @@ $kategoriList = $conn->query("SELECT DISTINCT nama_kategori FROM kategori ORDER 
 // Statistik total buku
 $total_buku = $conn->query("SELECT COUNT(*) AS c FROM buku")->fetch_assoc()['c'];
 
-// ── Generate cover SVG otomatis ──────────────────────────────
+// â”€â”€ Generate cover SVG otomatis â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function makeCoverSVG($judul, $penulis, $kNama) {
     $k = strtolower($kNama ?? '');
     if (strpos($k,'fiksi')!==false && strpos($k,'non')===false)
@@ -91,7 +93,7 @@ function makeCoverSVG($judul, $penulis, $kNama) {
     $lines[] = $cur2;
     $lines   = array_slice($lines, 0, 4);
 
-    $pen  = strlen($penulis) > 20 ? substr($penulis,0,20).'…' : $penulis;
+    $pen  = strlen($penulis) > 20 ? substr($penulis,0,20).'â€¦' : $penulis;
     $uid  = 'g'.abs(crc32($judul.$kNama));
     $seed = abs(crc32($judul)) % 100;
     $lbl  = strlen($kNama) > 12 ? substr($kNama,0,12) : ($kNama ?: 'Buku');
@@ -130,9 +132,10 @@ function makeCoverSVG($judul, $penulis, $kNama) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Data Buku - PerpusOnline</title>
+    <title>Data Buku | <?= NAMA_PERPUS ?></title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="katalog_styles.css">
     <style>
 
         /* =============================================
@@ -143,19 +146,21 @@ function makeCoverSVG($judul, $penulis, $kNama) {
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
                          'Helvetica Neue', Arial, sans-serif;
-            background: #f1f5f9;
+            background: #f8fafc;
+            color: #0f172a;
         }
 
 
         /* =============================================
-           HEADER
+           HEADER - Solid Slate
         ============================================= */
         .main-header {
             position: fixed;
             top: 0; left: 0; right: 0;
             height: 60px;
-            background: linear-gradient(135deg, #2d56b6 0%, #4172c1 100%);
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            background: #0f172a;
+            border-bottom: 1px solid #1e293b;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
             display: flex;
             align-items: center;
             padding: 0 1.5rem;
@@ -166,13 +171,14 @@ function makeCoverSVG($judul, $penulis, $kNama) {
             display: flex;
             align-items: center;
             gap: 12px;
-            color: white;
+            color: #f8fafc;
             text-decoration: none;
-            font-size: 1.25rem;
-            font-weight: 600;
+            font-size: 1.15rem;
+            font-weight: 700;
+            letter-spacing: 0.2px;
         }
 
-        .brand img { width: 32px; height: 32px; border-radius: 50%; }
+        .brand img { width: 32px; height: 32px; border-radius: 50%; border: 1px solid #334155; }
 
         .header-right {
             margin-left: auto;
@@ -185,12 +191,12 @@ function makeCoverSVG($judul, $penulis, $kNama) {
             width: 36px;
             height: 36px;
             border-radius: 50%;
-            border: 2px solid rgba(255,255,255,0.7);
+            border: 2px solid #334155;
             cursor: pointer;
-            transition: transform 0.2s;
+            transition: border-color 0.2s;
         }
 
-        .user-avatar:hover { transform: scale(1.05); }
+        .user-avatar:hover { border-color: #60a5fa; }
 
 
         /* =============================================
@@ -204,74 +210,77 @@ function makeCoverSVG($judul, $penulis, $kNama) {
 
 
         /* =============================================
-           SIDEBAR
+           SIDEBAR - Solid Slate
         ============================================= */
         .sidebar {
             position: fixed;
             top: 60px; left: 0; bottom: 0;
             width: 260px;
-            background: linear-gradient(180deg, #0f172a 0%, #1e293b 100%);
-            border-right: 1px solid rgba(255,255,255,0.05);
+            background: #0f172a;
+            border-right: 1px solid #1e293b;
             overflow-y: auto;
             z-index: 900;
             display: flex;
             flex-direction: column;
         }
 
-        .sidebar-section { padding: 1.5rem 0; }
+        .sidebar-section { padding: 1.25rem 0; }
 
         .sidebar-title {
-            font-size: 0.7rem;
-            font-weight: 600;
-            color: rgba(255,255,255,0.4);
+            font-size: 0.72rem;
+            font-weight: 700;
+            color: #64748b;
             text-transform: uppercase;
-            letter-spacing: 0.5px;
+            letter-spacing: 0.6px;
             padding: 0 1.5rem;
-            margin-bottom: 0.75rem;
+            margin-bottom: 0.65rem;
         }
 
-        .nav-item { margin: 0.25rem 1rem; }
+        .nav-item { margin: 0.2rem 0.85rem; }
 
         .nav-link {
             display: flex;
             align-items: center;
             gap: 0.75rem;
-            padding: 0.75rem 1rem;
-            color: rgba(245,245,245,0.7);
+            padding: 0.65rem 0.95rem;
+            color: #94a3b8;
             text-decoration: none;
             border-radius: 8px;
-            transition: all 0.2s;
-            font-size: 0.9rem;
+            transition: background-color 0.15s, color 0.15s;
+            font-size: 0.88rem;
+            font-weight: 500;
         }
 
-        .nav-link:hover { background: rgba(255,255,255,0.05); color: white; }
+        .nav-link:hover { background: #1e293b; color: #ffffff; }
 
         .nav-link.active {
-            background: linear-gradient(135deg, #2563eb, #1d4ed8);
-            color: white;
-            box-shadow: 0 4px 12px rgba(37,99,235,0.3);
+            background: #2563eb;
+            color: #ffffff;
+            font-weight: 600;
+            box-shadow: none;
         }
 
         .nav-link i { font-size: 1.1rem; width: 20px; }
 
         .sidebar-user {
             margin-top: auto;
-            padding: 1.25rem;
-            border-top: 1px solid rgba(255,255,255,0.1);
+            padding: 1.1rem 1.25rem;
+            border-top: 1px solid #1e293b;
             display: flex;
             align-items: center;
             gap: 0.75rem;
-            background: rgba(0,0,0,0.2);
+            background: #0b1120;
         }
 
         .sidebar-user img {
-            width: 40px; height: 40px;
+            width: 38px; height: 38px;
             border-radius: 50%;
-            border: 2px solid rgba(227,227,227,0.8);
+            border: 2px solid #334155;
+            object-fit: cover;
         }
 
-        .sidebar-user-name { font-weight: 600; color: white; font-size: 0.9rem; }
-        .sidebar-user-role { font-size: 0.75rem; color: rgba(255,255,255,0.5); }
+        .sidebar-user-name { font-weight: 600; color: #f8fafc; font-size: 0.88rem; }
+        .sidebar-user-role { font-size: 0.75rem; color: #64748b; text-transform: capitalize; }
 
 
         /* =============================================
@@ -280,7 +289,7 @@ function makeCoverSVG($judul, $penulis, $kNama) {
         .main-content {
             flex: 1;
             margin-left: 260px;
-            padding: 2rem;
+            padding: 2rem 2.25rem;
         }
 
 
@@ -288,10 +297,11 @@ function makeCoverSVG($judul, $penulis, $kNama) {
            PAGE HEADER
         ============================================= */
         .page-header {
-            background: white;
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
             border-radius: 12px;
             padding: 1.25rem 1.75rem;
-            box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.03);
             margin-bottom: 1.25rem;
             display: flex;
             align-items: center;
@@ -302,28 +312,29 @@ function makeCoverSVG($judul, $penulis, $kNama) {
         .page-title {
             font-size: 1.35rem;
             font-weight: 700;
-            color: #1e293b;
+            color: #0f172a;
             display: flex;
             align-items: center;
             gap: 0.6rem;
         }
 
-        .page-title i { color: #2563eb; }
+        .page-title i { color: #1d4ed8; }
 
         .page-title .total-badge {
-            font-size: 0.8rem;
+            font-size: 0.78rem;
             font-weight: 600;
             background: #eff6ff;
-            color: #2563eb;
+            color: #1d4ed8;
+            border: 1px solid #dbeafe;
             border-radius: 20px;
             padding: 0.2rem 0.65rem;
             margin-left: 0.25rem;
         }
 
         .btn-tambah {
-            background: linear-gradient(135deg, #2563eb, #1d4ed8);
-            color: white;
-            border: none;
+            background: #1d4ed8;
+            color: #ffffff;
+            border: 1px solid #1d4ed8;
             border-radius: 8px;
             padding: 0.55rem 1.2rem;
             font-weight: 600;
@@ -332,14 +343,14 @@ function makeCoverSVG($judul, $penulis, $kNama) {
             display: inline-flex;
             align-items: center;
             gap: 0.4rem;
-            transition: all 0.2s;
+            transition: background-color 0.15s ease;
             white-space: nowrap;
         }
 
         .btn-tambah:hover {
-            opacity: 0.9;
+            background: #1e40af;
+            border-color: #1e40af;
             color: white;
-            transform: translateY(-1px);
         }
 
 
@@ -347,58 +358,60 @@ function makeCoverSVG($judul, $penulis, $kNama) {
            FILTER BAR
         ============================================= */
         .filter-bar {
-            background: white;
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
             border-radius: 12px;
-            padding: 1rem 1.5rem;
-            box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+            padding: 0.9rem 1.35rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.03);
             margin-bottom: 1.25rem;
             display: flex;
             align-items: center;
-            gap: 0.6rem;
+            gap: 0.5rem;
             flex-wrap: wrap;
         }
 
         .filter-label {
-            font-size: 0.78rem;
-            font-weight: 600;
-            color: #94a3b8;
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: #64748b;
             text-transform: uppercase;
-            letter-spacing: 0.4px;
+            letter-spacing: 0.5px;
             margin-right: 0.25rem;
         }
 
         .filter-btn {
-            padding: 0.35rem 0.9rem;
-            border-radius: 20px;
+            padding: 0.35rem 0.85rem;
+            border-radius: 6px;
             text-decoration: none;
-            font-size: 0.83rem;
+            font-size: 0.82rem;
             font-weight: 500;
-            border: 1.5px solid #e2e8f0;
-            color: #475569;
-            background: transparent;
-            transition: all 0.18s;
+            border: 1px solid #cbd5e1;
+            color: #334155;
+            background: #ffffff;
+            transition: all 0.15s ease;
             display: inline-flex;
             align-items: center;
             gap: 0.3rem;
         }
 
         .filter-btn:hover {
-            border-color: #2563eb;
-            color: #2563eb;
+            border-color: #1d4ed8;
+            color: #1d4ed8;
             background: #eff6ff;
         }
 
         .filter-btn.active {
-            background: #2563eb;
-            border-color: #2563eb;
-            color: white;
+            background: #1d4ed8;
+            border-color: #1d4ed8;
+            color: #ffffff;
+            font-weight: 600;
         }
 
-        /* Warna aktif per kategori */
-        .filter-btn.aktif-fiksi        { background: #8b5cf6; border-color: #8b5cf6; color: white; }
-        .filter-btn.aktif-non-fiksi    { background: #3b82f6; border-color: #3b82f6; color: white; }
-        .filter-btn.aktif-pendidikan   { background: #10b981; border-color: #10b981; color: white; }
-        .filter-btn.aktif-biografi     { background: #f59e0b; border-color: #f59e0b; color: white; }
+        /* Solid per-category active colors (No neon AI colors) */
+        .filter-btn.aktif-fiksi        { background: #2563eb; border-color: #2563eb; color: #ffffff; }
+        .filter-btn.aktif-non-fiksi    { background: #0284c7; border-color: #0284c7; color: #ffffff; }
+        .filter-btn.aktif-pendidikan   { background: #15803d; border-color: #15803d; color: #ffffff; }
+        .filter-btn.aktif-biografi     { background: #b45309; border-color: #b45309; color: #ffffff; }
 
         .search-wrap {
             margin-left: auto;
@@ -407,26 +420,34 @@ function makeCoverSVG($judul, $penulis, $kNama) {
         }
 
         .search-wrap input {
-            border: 1.5px solid #e2e8f0;
+            border: 1px solid #cbd5e1;
             border-radius: 8px;
-            padding: 0.35rem 0.9rem;
-            font-size: 0.83rem;
-            color: #1e293b;
-            width: 200px;
+            padding: 0.4rem 0.85rem;
+            font-size: 0.85rem;
+            color: #0f172a;
+            width: 220px;
             outline: none;
-            transition: border-color 0.2s;
+            transition: border-color 0.15s, box-shadow 0.15s;
         }
 
-        .search-wrap input:focus { border-color: #2563eb; }
+        .search-wrap input:focus {
+            border-color: #1d4ed8;
+            box-shadow: 0 0 0 3px rgba(29, 78, 216, 0.12);
+        }
 
         .search-wrap button {
-            background: #2563eb;
-            color: white;
-            border: none;
+            background: #1d4ed8;
+            color: #ffffff;
+            border: 1px solid #1d4ed8;
             border-radius: 8px;
-            padding: 0.35rem 0.75rem;
-            font-size: 0.9rem;
+            padding: 0.4rem 0.85rem;
+            font-size: 0.88rem;
             cursor: pointer;
+            transition: background-color 0.15s;
+        }
+
+        .search-wrap button:hover {
+            background: #1e40af;
         }
 
 
@@ -434,9 +455,10 @@ function makeCoverSVG($judul, $penulis, $kNama) {
            TABEL BUKU
         ============================================= */
         .table-card {
-            background: white;
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
             border-radius: 12px;
-            box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.03);
             overflow: hidden;
         }
 
@@ -454,10 +476,10 @@ function makeCoverSVG($judul, $penulis, $kNama) {
             text-align: left;
             font-size: 0.75rem;
             font-weight: 700;
-            color: #64748b;
+            color: #475569;
             text-transform: uppercase;
             letter-spacing: 0.4px;
-            border-bottom: 2px solid #e2e8f0;
+            border-bottom: 1px solid #e2e8f0;
             white-space: nowrap;
         }
 
@@ -470,7 +492,7 @@ function makeCoverSVG($judul, $penulis, $kNama) {
         }
 
         tr:last-child td { border-bottom: none; }
-        tr:hover td { background: #fafbff; }
+        tr:hover td { background: #f8fafc; }
 
 
         /* =============================================
@@ -479,18 +501,18 @@ function makeCoverSVG($judul, $penulis, $kNama) {
         .cover-thumb {
             width: 42px;
             height: 58px;
-            border-radius: 5px;
+            border-radius: 4px;
             object-fit: cover;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+            border: 1px solid #e2e8f0;
             flex-shrink: 0;
             display: block;
         }
 
         .cover-thumb-wrap {
             flex-shrink: 0;
-            border-radius: 5px;
+            border-radius: 4px;
             overflow: hidden;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+            border: 1px solid #e2e8f0;
             width: 42px;
             height: 58px;
         }
@@ -498,7 +520,7 @@ function makeCoverSVG($judul, $penulis, $kNama) {
         .cover-placeholder {
             width: 42px;
             height: 58px;
-            border-radius: 5px;
+            border-radius: 4px;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -514,7 +536,7 @@ function makeCoverSVG($judul, $penulis, $kNama) {
 
         .book-title-text {
             font-weight: 600;
-            color: #1e293b;
+            color: #0f172a;
             line-height: 1.35;
         }
 
@@ -526,54 +548,54 @@ function makeCoverSVG($judul, $penulis, $kNama) {
 
 
         /* =============================================
-           BADGE KATEGORI
+           BADGE KATEGORI - Clean Solid Tints
         ============================================= */
         .badge-kat {
             padding: 0.25rem 0.65rem;
-            border-radius: 12px;
+            border-radius: 6px;
             font-size: 0.73rem;
             font-weight: 600;
             white-space: nowrap;
             display: inline-block;
         }
 
-        .kat-non-fiksi  { background: rgba(59,130,246,0.1);  color: #2563eb; }
-        .kat-fiksi      { background: rgba(139,92,246,0.1);  color: #7c3aed; }
-        .kat-pendidikan { background: rgba(16,185,129,0.1);  color: #059669; }
-        .kat-biografi   { background: rgba(245,158,11,0.1);  color: #d97706; }
-        .kat-default    { background: rgba(100,116,139,0.1); color: #475569; }
+        .kat-non-fiksi  { background: #eff6ff; color: #1d4ed8; border: 1px solid #dbeafe; }
+        .kat-fiksi      { background: #f5f3ff; color: #4f46e5; border: 1px solid #ede9fe; }
+        .kat-pendidikan { background: #f0fdf4; color: #15803d; border: 1px solid #dcfce7; }
+        .kat-biografi   { background: #fffbeb; color: #b45309; border: 1px solid #fef3c7; }
+        .kat-default    { background: #f1f5f9; color: #475569; border: 1px solid #e2e8f0; }
 
 
         /* =============================================
            STOK INDICATOR
         ============================================= */
-        .stok-ok   { color: #059669; font-weight: 600; }
-        .stok-low  { color: #d97706; font-weight: 600; }
-        .stok-zero { color: #dc2626; font-weight: 600; }
+        .stok-ok   { color: #15803d; font-weight: 600; }
+        .stok-low  { color: #b45309; font-weight: 600; }
+        .stok-zero { color: #b91c1c; font-weight: 600; }
 
 
         /* =============================================
            TOMBOL AKSI
         ============================================= */
         .btn-act {
-            padding: 0.28rem 0.65rem;
+            padding: 0.32rem 0.7rem;
             border-radius: 6px;
             font-size: 0.78rem;
             font-weight: 500;
-            border: none;
+            border: 1px solid transparent;
             cursor: pointer;
             text-decoration: none;
             display: inline-flex;
             align-items: center;
             gap: 0.3rem;
-            transition: all 0.18s;
+            transition: all 0.15s ease;
         }
 
-        .btn-edit-act  { background: rgba(37,99,235,0.1);  color: #2563eb; }
-        .btn-edit-act:hover  { background: #2563eb; color: white; }
+        .btn-edit-act  { background: #eff6ff; color: #1d4ed8; border-color: #dbeafe; }
+        .btn-edit-act:hover  { background: #1d4ed8; color: #ffffff; }
 
-        .btn-del-act   { background: rgba(239,68,68,0.1);  color: #dc2626; }
-        .btn-del-act:hover   { background: #ef4444; color: white; }
+        .btn-del-act   { background: #fef2f2; color: #b91c1c; border-color: #fecaca; }
+        .btn-del-act:hover   { background: #dc2626; color: #ffffff; }
 
 
         /* =============================================
@@ -585,8 +607,8 @@ function makeCoverSVG($judul, $penulis, $kNama) {
             color: #94a3b8;
         }
 
-        .empty-state i    { font-size: 2.5rem; display: block; margin-bottom: 0.75rem; }
-        .empty-state h5   { font-size: 1rem; color: #64748b; margin-bottom: 0.35rem; }
+        .empty-state i    { font-size: 2.5rem; display: block; margin-bottom: 0.75rem; color: #cbd5e1; }
+        .empty-state h5   { font-size: 1rem; color: #475569; margin-bottom: 0.35rem; }
         .empty-state p    { font-size: 0.83rem; }
 
 
@@ -598,9 +620,10 @@ function makeCoverSVG($judul, $penulis, $kNama) {
             top: 72px; right: 1.5rem;
             z-index: 9999;
             min-width: 270px;
-            border-radius: 10px;
-            box-shadow: 0 8px 24px rgba(0,0,0,0.12);
-            animation: slideIn 0.3s ease;
+            border-radius: 8px;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+            animation: slideIn 0.25s ease;
         }
 
         @keyframes slideIn {
@@ -616,8 +639,8 @@ function makeCoverSVG($judul, $penulis, $kNama) {
             display: none;
             background: none;
             border: none;
-            color: white;
-            font-size: 1.5rem;
+            color: #f8fafc;
+            font-size: 1.4rem;
             cursor: pointer;
             margin-right: 1rem;
         }
@@ -628,9 +651,9 @@ function makeCoverSVG($judul, $penulis, $kNama) {
         ============================================= */
         @media (max-width: 991px) {
             .mobile-toggle  { display: block; }
-            .sidebar        { transform: translateX(-100%); transition: transform 0.3s; }
+            .sidebar        { transform: translateX(-100%); transition: transform 0.25s ease; }
             .sidebar.show   { transform: translateX(0); }
-            .main-content   { margin-left: 0; }
+            .main-content   { margin-left: 0; padding: 1.5rem 1rem; }
             .search-wrap    { margin-left: 0; }
             .filter-bar     { flex-wrap: wrap; }
         }
@@ -651,12 +674,15 @@ function makeCoverSVG($judul, $penulis, $kNama) {
         <span>PerpusOnline</span>
     </a>
     <div class="header-right">
+        <a href="index.php" class="btn btn-outline-light btn-sm rounded-pill px-3 d-none d-sm-inline-flex me-2" style="font-size:0.8rem;">
+            <i class="bi bi-globe me-1"></i>Katalog Publik
+        </a>
         <div class="dropdown">
             <img src="logo 40.jpeg" alt="User" class="user-avatar" data-bs-toggle="dropdown">
             <ul class="dropdown-menu dropdown-menu-end">
                 <li><a class="dropdown-item" href="profile_admin.php"><i class="bi bi-person me-2"></i>Profile</a></li>
                 <li><hr class="dropdown-divider"></li>
-                <li><a class="dropdown-item" href="logout.php"><i class="bi bi-box-arrow-right me-2"></i>Keluar</a></li>
+                <li><a class="dropdown-item text-danger" href="logout.php"><i class="bi bi-box-arrow-right me-2"></i>Keluar</a></li>
             </ul>
         </div>
     </div>
@@ -673,13 +699,23 @@ function makeCoverSVG($judul, $penulis, $kNama) {
             <div class="nav-item"><a href="anggota.php" class="nav-link"><i class="bi bi-people"></i><span>Anggota</span></a></div>
             <div class="nav-item"><a href="peminjaman.php" class="nav-link"><i class="bi bi-clock-history"></i><span>Peminjaman</span></a></div>
             <div class="nav-item"><a href="pengembalian.php" class="nav-link"><i class="bi bi-arrow-return-left"></i><span>Pengembalian</span></a></div>
-            <div class="nav-item"><a href="persetujuan_admin.php" class="nav-link"><i class="bi bi-check2-square"></i><span>Persetujuan</span></a></div>
+            <div class="nav-item">
+                <a href="persetujuan_admin.php" class="nav-link d-flex align-items-center justify-content-between">
+                    <div class="d-flex align-items-center gap-2">
+                        <i class="bi bi-check2-square"></i><span>Persetujuan</span>
+                    </div>
+                    <?php if (!empty($menunggu_acc) && $menunggu_acc > 0): ?>
+                        <span class="sidebar-notif-badge"><?= $menunggu_acc ?></span>
+                    <?php endif; ?>
+                </a>
+            </div>
         </div>
         <div class="sidebar-section">
             <div class="sidebar-title">Lainnya</div>
             <div class="nav-item"><a href="profile_admin.php" class="nav-link"><i class="bi bi-person-circle"></i><span>Profile Admin</span></a></div>
             <div class="nav-item"><a href="tambah_kategori.php" class="nav-link"><i class="bi bi-tags-fill"></i><span>Kategori</span></a></div>
-            <div class="nav-item"><a href="logout.php" class="nav-link"><i class="bi bi-box-arrow-left"></i><span>Keluar</span></a></div>
+            <div class="nav-item"><a href="index.php" class="nav-link"><i class="bi bi-globe"></i><span>Katalog Publik</span></a></div>
+            <div class="nav-item"><a href="logout.php" class="nav-link text-danger"><i class="bi bi-box-arrow-left"></i><span>Keluar</span></a></div>
         </div>
         <div class="sidebar-user">
             <img src="logo 40.jpeg" alt="User">
@@ -770,194 +806,212 @@ function makeCoverSVG($judul, $penulis, $kNama) {
         .books-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-            gap: 1.5rem;
+            gap: 1.25rem;
         }
 
         .book-card {
-            background: #fff;
-            border-radius: 16px;
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
             overflow: hidden;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-            transition: transform 0.3s, box-shadow 0.3s;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+            transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
             display: flex;
             flex-direction: column;
         }
 
-.book-card:hover {
-    transform: translateY(-6px);
-    box-shadow: 0 12px 32px rgba(0,0,0,0.15);
-}
+        .book-card:hover {
+            transform: translateY(-3px);
+            border-color: #cbd5e1;
+            box-shadow: 0 6px 16px rgba(0,0,0,0.06);
+        }
 
-.book-card-cover {
-    position: relative;
-    height: 280px;  /* Lebih tinggi untuk rasio buku asli */
-    overflow: hidden;
-    flex-shrink: 0;
-}
+        .book-card-cover {
+            position: relative;
+            height: 260px;
+            overflow: hidden;
+            flex-shrink: 0;
+            background-color: #f1f5f9;
+        }
 
-.book-card-cover img {
-    width: 100%; 
-    height: 100%;
-    object-fit: cover;
-    display: block;
-}
+        .book-card-cover img {
+            width: 100%; 
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
 
-.book-card-cover .cover-gen {
-    width: 100%; 
-    height: 100%;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: 1.5rem;
-    text-align: center;
-    gap: 0.6rem;
-}
+        .book-card-cover .cover-gen {
+            width: 100%; 
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 1.5rem;
+            text-align: center;
+            gap: 0.6rem;
+            position: relative;
+        }
 
-.cover-gen .cg-title {
-    font-weight: 700;
-    font-size: 1.1rem;
-    line-height: 1.4;
-    color: #fff;
-    word-break: break-word;
-    max-width: 100%;
-}
+        .book-card-cover .cover-gen::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 14px;
+            background: rgba(0,0,0,0.2);
+            border-right: 1px solid rgba(255,255,255,0.15);
+        }
 
-.cover-gen .cg-author {
-    font-size: 0.8rem;
-    color: rgba(255,255,255,0.7);
-}
+        .cover-gen .cg-title {
+            font-weight: 700;
+            font-size: 1.05rem;
+            line-height: 1.35;
+            color: #ffffff;
+            word-break: break-word;
+            max-width: 100%;
+            letter-spacing: -0.2px;
+        }
 
-.stok-pill {
-    position: absolute;
-    top: 12px; 
-    right: 12px;
-    padding: 0.3rem 0.7rem;
-    border-radius: 20px;
-    font-size: 0.75rem;
-    font-weight: 700;
-    color: #fff;
-    backdrop-filter: blur(4px);
-    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-}
+        .cover-gen .cg-author {
+            font-size: 0.8rem;
+            color: rgba(255,255,255,0.8);
+        }
 
-.stok-pill.sp-ok   { background: rgba(5,150,105,0.9); }
-.stok-pill.sp-low  { background: rgba(217,119,6,0.9); }
-.stok-pill.sp-zero { background: rgba(220,38,38,0.9); }
+        .stok-pill {
+            position: absolute;
+            top: 10px; 
+            right: 10px;
+            padding: 0.25rem 0.65rem;
+            border-radius: 6px;
+            font-size: 0.72rem;
+            font-weight: 700;
+            color: #ffffff;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+        }
 
-.book-card-body {
-    padding: 1.2rem;
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-}
+        .stok-pill.sp-ok   { background: #15803d; }
+        .stok-pill.sp-low  { background: #b45309; }
+        .stok-pill.sp-zero { background: #b91c1c; }
 
-.bc-kat {
-    display: inline-block;
-    padding: 0.25rem 0.7rem;
-    border-radius: 12px;
-    font-size: 0.7rem;
-    font-weight: 600;
-    margin-bottom: 0.6rem;
-    width: fit-content;
-}
+        .book-card-body {
+            padding: 1rem 1.15rem;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
 
-.bc-title {
-    font-size: 1rem;
-    font-weight: 700;
-    color: #1e293b;
-    line-height: 1.4;
-    margin-bottom: 0.3rem;
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-}
+        .bc-kat {
+            display: inline-block;
+            padding: 0.2rem 0.55rem;
+            border-radius: 4px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            width: fit-content;
+            border: 1px solid transparent;
+        }
 
-.bc-author {
-    font-size: 0.8rem;
-    color: #64748b;
-    display: flex;
-    align-items: center;
-    gap: 0.3rem;
-    margin-bottom: 1rem;
-}
+        .bc-title {
+            font-size: 0.95rem;
+            font-weight: 700;
+            color: #0f172a;
+            line-height: 1.35;
+            margin-bottom: 0.25rem;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
 
-.bc-actions {
-    margin-top: auto;
-    display: flex;
-    gap: 0.5rem;
-    padding-top: 0.8rem;
-    border-top: 1px solid #f1f5f9;
-}
+        .bc-author {
+            font-size: 0.8rem;
+            color: #64748b;
+            display: flex;
+            align-items: center;
+            gap: 0.3rem;
+            margin-bottom: 0.9rem;
+        }
 
-.bc-btn-edit {
-    flex: 1;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.4rem;
-    padding: 0.5rem 0.7rem;
-    border-radius: 8px;
-    font-size: 0.8rem;
-    font-weight: 600;
-    text-decoration: none;
-    background: rgba(37,99,235,0.1);
-    color: #2563eb;
-    transition: all 0.2s;
-}
+        .bc-actions {
+            margin-top: auto;
+            display: flex;
+            gap: 0.5rem;
+            padding-top: 0.75rem;
+            border-top: 1px solid #f1f5f9;
+        }
 
-.bc-btn-edit:hover { 
-    background: #2563eb; 
-    color: #fff; 
-}
+        .bc-btn-edit {
+            flex: 1;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.4rem;
+            padding: 0.45rem 0.7rem;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-decoration: none;
+            background: #eff6ff;
+            color: #1d4ed8;
+            border: 1px solid #dbeafe;
+            transition: all 0.15s ease;
+        }
 
-.bc-btn-del {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 38px; 
-    height: 38px;
-    border-radius: 8px;
-    background: rgba(239,68,68,0.1);
-    color: #dc2626;
-    text-decoration: none;
-    font-size: 0.9rem;
-    flex-shrink: 0;
-    transition: all 0.2s;
-}
+        .bc-btn-edit:hover { 
+            background: #1d4ed8; 
+            color: #ffffff; 
+        }
 
-.bc-btn-del:hover { 
-    background: #ef4444; 
-    color: #fff; 
-}
-</style>
+        .bc-btn-del {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 34px; 
+            height: 34px;
+            border-radius: 6px;
+            background: #fef2f2;
+            color: #b91c1c;
+            border: 1px solid #fee2e2;
+            text-decoration: none;
+            font-size: 0.85rem;
+            flex-shrink: 0;
+            transition: all 0.15s ease;
+        }
+
+        .bc-btn-del:hover { 
+            background: #dc2626; 
+            color: #ffffff; 
+        }
+        </style>
 
         <div class="books-grid">
         <?php
-        // Helper warna kategori
+        // Helper warna kategori (Solid and clean)
         function katClr2($k) {
             $k = strtolower($k ?? '');
-            if (strpos($k,'novel')!==false)                                  return ['#10b981','rgba(16,185,129,0.13)'];
-            if (strpos($k,'sains')!==false)                                  return ['#f59e0b','rgba(245,158,11,0.13)'];
-            if (strpos($k,'fiksi')!==false && strpos($k,'non')===false)      return ['#8b5cf6','rgba(139,92,246,0.13)'];
-            if (strpos($k,'non')!==false)                                    return ['#3b82f6','rgba(59,130,246,0.13)'];
-            if (strpos($k,'pendidikan')!==false)                             return ['#059669','rgba(5,150,105,0.13)'];
-            if (strpos($k,'biografi')!==false)                               return ['#d97706','rgba(217,119,6,0.13)'];
-            if (strpos($k,'sejarah')!==false)                                return ['#dc2626','rgba(220,38,38,0.13)'];
-            return ['#6366f1','rgba(99,102,241,0.13)'];
+            if (strpos($k,'novel')!==false)                                  return ['#0f766e','#f0fdfa','#ccfbf1'];
+            if (strpos($k,'sains')!==false)                                  return ['#0369a1','#f0f9ff','#e0f2fe'];
+            if (strpos($k,'fiksi')!==false && strpos($k,'non')===false)      return ['#4338ca','#eef2ff','#e0e7ff'];
+            if (strpos($k,'non')!==false)                                    return ['#1d4ed8','#eff6ff','#dbeafe'];
+            if (strpos($k,'pendidikan')!==false)                             return ['#15803d','#f0fdf4','#dcfce7'];
+            if (strpos($k,'biografi')!==false)                               return ['#b45309','#fffbeb','#fef3c7'];
+            if (strpos($k,'sejarah')!==false)                                return ['#b91c1c','#fef2f2','#fee2e2'];
+            return ['#334155','#f8fafc','#e2e8f0'];
         }
-        // Helper gradien cover
-        function coverGrad2($k, $judul) {
+        // Helper warna solid cover buku (Solid classic library book tones, no gradient)
+        function coverColor2($k, $judul) {
             $k = strtolower($k ?? '');
-            if (strpos($k,'novel')!==false)                              return ['#134e4a','#0d9488'];
-            if (strpos($k,'sains')!==false)                              return ['#78350f','#d97706'];
-            if (strpos($k,'fiksi')!==false && strpos($k,'non')===false)  return ['#4c1d95','#7c3aed'];
-            if (strpos($k,'non')!==false)                                return ['#1e3a5f','#1d4ed8'];
-            if (strpos($k,'pendidikan')!==false)                         return ['#064e3b','#059669'];
-            if (strpos($k,'biografi')!==false)                           return ['#78350f','#c2410c'];
-            if (strpos($k,'sejarah')!==false)                            return ['#7f1d1d','#dc2626'];
-            $p=[['#1e1b4b','#4338ca'],['#134e4a','#0f766e'],['#4a044e','#a21caf'],['#0c4a6e','#0369a1']];
+            if (strpos($k,'novel')!==false)                              return '#115e59';
+            if (strpos($k,'sains')!==false)                              return '#0369a1';
+            if (strpos($k,'fiksi')!==false && strpos($k,'non')===false)  return '#3730a3';
+            if (strpos($k,'non')!==false)                                return '#1e40af';
+            if (strpos($k,'pendidikan')!==false)                         return '#166534';
+            if (strpos($k,'biografi')!==false)                           return '#9a3412';
+            if (strpos($k,'sejarah')!==false)                            return '#991b1b';
+            $p=['#1e293b','#1e3a8a','#064e3b','#78350f','#831843'];
             return $p[abs(crc32($judul))%count($p)];
         }
 
@@ -965,29 +1019,15 @@ function makeCoverSVG($judul, $penulis, $kNama) {
             while ($buku = $result->fetch_assoc()):
                 $kNama   = $buku['nama_kategori'] ?? 'Umum';
                 $stok    = intval($buku['stok_tersedia'] ?? $buku['stok'] ?? 0);
-                $stokT   = intval($buku['stok_total'] ?? $buku['stok'] ?? 0);
-                $hasCover = !empty($buku['cover']) && file_exists('covers/'.$buku['cover']);
-                [$kc, $kb] = katClr2($kNama);
-                [$g1, $g2] = coverGrad2($kNama, $buku['judul_buku']);
-                $spCls = $stok === 0 ? 'sp-zero' : ($stok <= 3 ? 'sp-low' : 'sp-ok');
+                $lokasi  = $buku['lokasi_rak'] ?? 'Rak A-1';
         ?>
             <div class="book-card">
                 <div class="book-card-cover">
-                    <?php if ($hasCover): ?>
-                        <img src="covers/<?= htmlspecialchars($buku['cover']) ?>"
-                             alt="<?= htmlspecialchars($buku['judul_buku']) ?>">
-                    <?php else: ?>
-                        <div class="cover-gen"
-                             style="background:linear-gradient(155deg,<?= $g1 ?>,<?= $g2 ?>);">
-                            <div class="cg-title"><?= htmlspecialchars($buku['judul_buku']) ?></div>
-                            <div class="cg-author"><?= htmlspecialchars($buku['penulis'] ?? '') ?></div>
-                        </div>
-                    <?php endif; ?>
-                    <span class="stok-pill <?= $spCls ?>"><?= $stokT ?> eks</span>
+                    <?= renderBookCover($buku['cover'], $buku['judul_buku'], $buku['penulis'], $kNama, $lokasi) ?>
                 </div>
 
                 <div class="book-card-body">
-                    <span class="bc-kat" style="color:<?= $kc ?>;background:<?= $kb ?>;">
+                    <span class="bc-kat">
                         <?= htmlspecialchars($kNama) ?>
                     </span>
                     <div class="bc-title"><?= htmlspecialchars($buku['judul_buku']) ?></div>
@@ -995,7 +1035,13 @@ function makeCoverSVG($judul, $penulis, $kNama) {
                         <i class="bi bi-person" style="font-size:0.68rem;"></i>
                         <?= htmlspecialchars($buku['penulis'] ?? '-') ?>
                     </div>
-                    <div class="bc-actions">
+
+                    <div class="d-flex align-items-center justify-content-between my-2">
+                        <?= renderRakBadge($lokasi) ?>
+                        <?= renderStockBadge($stok) ?>
+                    </div>
+
+                    <div class="bc-actions mt-auto">
                         <a href="edit_buku.php?id=<?= $buku['id_buku'] ?>" class="bc-btn-edit">
                             <i class="bi bi-pencil-fill"></i> Edit
                         </a>

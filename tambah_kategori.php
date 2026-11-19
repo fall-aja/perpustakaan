@@ -9,6 +9,8 @@ $conn = new mysqli("localhost", "root", "", "perpustakaan");
 if ($conn->connect_error) {
     die("Koneksi gagal: " . $conn->connect_error);
 }
+require_once 'helper_katalog.php';
+$menunggu_acc = getJumlahMenunggu($conn);
 
 $pesan = '';
 $pesan_type = '';
@@ -89,482 +91,489 @@ $total_kategori = $conn->query("SELECT COUNT(*) AS c FROM kategori")->fetch_asso
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
 
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-            background: #f1f5f9;
-        }
+    body {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+        background: #f8fafc;
+        color: #0f172a;
+    }
 
-        /* HEADER */
-        .main-header {
-            position: fixed;
-            top: 0; left: 0; right: 0;
-            height: 60px;
-            background: linear-gradient(135deg, #2d56b6 0%, #4172c1 100%);
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-            display: flex;
-            align-items: center;
-            padding: 0 1.5rem;
-            z-index: 1000;
-        }
+    /* HEADER */
+    .main-header {
+        position: fixed;
+        top: 0; left: 0; right: 0;
+        height: 60px;
+        background: #0f172a;
+        border-bottom: 1px solid #1e293b;
+        display: flex;
+        align-items: center;
+        padding: 0 1.5rem;
+        z-index: 1000;
+    }
 
-        .brand {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            color: white;
-            text-decoration: none;
-            font-size: 1.25rem;
-            font-weight: 600;
-        }
+    .brand {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        color: #f8fafc;
+        text-decoration: none;
+        font-size: 1.15rem;
+        font-weight: 600;
+    }
 
-        .brand img { width: 32px; height: 32px; border-radius: 50%; }
+    .brand img { width: 32px; height: 32px; border-radius: 6px; object-fit: cover; }
 
-        .header-right {
-            margin-left: auto;
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-        }
+    .header-right {
+        margin-left: auto;
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
 
-        .user-avatar {
-            width: 36px; height: 36px;
-            border-radius: 50%;
-            border: 2px solid rgba(255,255,255,0.7);
-            cursor: pointer;
-            transition: transform 0.2s;
-        }
-        .user-avatar:hover { transform: scale(1.05); }
+    .user-avatar {
+        width: 36px; height: 36px;
+        border-radius: 50%;
+        border: 2px solid #334155;
+        cursor: pointer;
+        transition: opacity 0.2s;
+    }
+    .user-avatar:hover { opacity: 0.85; }
 
-        /* LAYOUT */
-        .layout-wrapper { display: flex; padding-top: 60px; min-height: 100vh; }
+    /* LAYOUT */
+    .layout-wrapper { display: flex; padding-top: 60px; min-height: 100vh; }
 
-        /* SIDEBAR */
-        .sidebar {
-            position: fixed;
-            top: 60px; left: 0; bottom: 0;
-            width: 260px;
-            background: linear-gradient(180deg, #0f172a 0%, #1e293b 100%);
-            border-right: 1px solid rgba(255,255,255,0.05);
-            overflow-y: auto;
-            z-index: 900;
-            display: flex;
-            flex-direction: column;
-        }
+    /* SIDEBAR */
+    .sidebar {
+        position: fixed;
+        top: 60px; left: 0; bottom: 0;
+        width: 260px;
+        background: #0f172a;
+        border-right: 1px solid #1e293b;
+        overflow-y: auto;
+        z-index: 900;
+        display: flex;
+        flex-direction: column;
+    }
 
-        .sidebar-section { padding: 1.5rem 0; }
+    .sidebar-section { padding: 1.5rem 0; }
 
-        .sidebar-title {
-            font-size: 0.7rem;
-            font-weight: 600;
-            color: rgba(255,255,255,0.4);
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            padding: 0 1.5rem;
-            margin-bottom: 0.75rem;
-        }
+    .sidebar-title {
+        font-size: 0.72rem;
+        font-weight: 600;
+        color: #64748b;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        padding: 0 1.5rem;
+        margin-bottom: 0.75rem;
+    }
 
-        .nav-item { margin: 0.25rem 1rem; }
+    .nav-item { margin: 0.25rem 0.875rem; }
 
-        .nav-link {
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            padding: 0.75rem 1rem;
-            color: rgba(245,245,245,0.7);
-            text-decoration: none;
-            border-radius: 8px;
-            transition: all 0.2s;
-            font-size: 0.9rem;
-        }
+    .nav-link {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 0.7rem 1rem;
+        color: #94a3b8;
+        text-decoration: none;
+        border-radius: 8px;
+        transition: background 0.15s, color 0.15s;
+        font-size: 0.9rem;
+        font-weight: 500;
+    }
 
-        .nav-link:hover { background: rgba(255,255,255,0.05); color: white; }
+    .nav-link:hover { background: #1e293b; color: #f8fafc; }
 
-        .nav-link.active {
-            background: linear-gradient(135deg, #2563eb, #1d4ed8);
-            color: white;
-            box-shadow: 0 4px 12px rgba(37,99,235,0.3);
-        }
+    .nav-link.active {
+        background: #2563eb;
+        color: #ffffff;
+    }
 
-        .nav-link i { font-size: 1.1rem; width: 20px; }
+    .nav-link i { font-size: 1.1rem; width: 20px; }
 
-        .sidebar-user {
-            margin-top: auto;
-            padding: 1.25rem;
-            border-top: 1px solid rgba(255,255,255,0.1);
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            background: rgba(0,0,0,0.2);
-        }
+    .sidebar-user {
+        margin-top: auto;
+        padding: 1.25rem;
+        border-top: 1px solid #1e293b;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        background: #090d16;
+    }
 
-        .sidebar-user img { width: 40px; height: 40px; border-radius: 50%; border: 2px solid rgba(227,227,227,0.8); }
-        .sidebar-user-name { font-weight: 600; color: white; font-size: 0.9rem; }
-        .sidebar-user-role { font-size: 0.75rem; color: rgba(255,255,255,0.5); }
+    .sidebar-user img { width: 40px; height: 40px; border-radius: 50%; border: 2px solid #334155; object-fit: cover; }
+    .sidebar-user-name { font-weight: 600; color: #f8fafc; font-size: 0.9rem; }
+    .sidebar-user-role { font-size: 0.75rem; color: #94a3b8; text-transform: capitalize; }
 
-        /* MAIN CONTENT */
-        .main-content { flex: 1; margin-left: 260px; padding: 2rem; }
+    /* MAIN CONTENT */
+    .main-content { flex: 1; margin-left: 260px; padding: 2rem; background: #f8fafc; }
 
-        /* PAGE HEADER */
-        .page-header {
-            background: white;
-            border-radius: 12px;
-            padding: 1.25rem 1.75rem;
-            box-shadow: 0 1px 4px rgba(0,0,0,0.06);
-            margin-bottom: 1.25rem;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 1rem;
-        }
+    /* PAGE HEADER */
+    .page-header {
+        background: #ffffff;
+        border-radius: 12px;
+        padding: 1.5rem 2rem;
+        border: 1px solid #e2e8f0;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+        margin-bottom: 1.5rem;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+    }
 
-        .page-title {
-            font-size: 1.35rem;
-            font-weight: 700;
-            color: #1e293b;
-            display: flex;
-            align-items: center;
-            gap: 0.6rem;
-        }
+    .page-title {
+        font-size: 1.4rem;
+        font-weight: 700;
+        color: #0f172a;
+        display: flex;
+        align-items: center;
+        gap: 0.6rem;
+    }
 
-        .page-title i { color: #0f766e; }
+    .page-title i { color: #0f766e; }
 
-        .page-title .total-badge {
-            font-size: 0.8rem;
-            font-weight: 600;
-            background: #f0fdf4;
-            color: #059669;
-            border-radius: 20px;
-            padding: 0.2rem 0.65rem;
-            margin-left: 0.25rem;
-        }
+    .page-title .total-badge {
+        font-size: 0.8rem;
+        font-weight: 600;
+        background: #dcfce7;
+        color: #15803d;
+        border: 1px solid #bbf7d0;
+        border-radius: 6px;
+        padding: 0.2rem 0.65rem;
+        margin-left: 0.25rem;
+    }
 
-        .btn-back {
-            background: #f1f5f9;
-            color: #475569;
-            border: none;
-            border-radius: 8px;
-            padding: 0.55rem 1.2rem;
-            font-weight: 600;
-            font-size: 0.875rem;
-            text-decoration: none;
-            display: inline-flex;
-            align-items: center;
-            gap: 0.4rem;
-            transition: all 0.2s;
-        }
-        .btn-back:hover { background: #e2e8f0; color: #1e293b; }
+    .btn-back {
+        background: #ffffff;
+        color: #475569;
+        border: 1px solid #cbd5e1;
+        border-radius: 8px;
+        padding: 0.5rem 1.1rem;
+        font-weight: 600;
+        font-size: 0.875rem;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        transition: background 0.15s, border-color 0.15s, color 0.15s;
+    }
+    .btn-back:hover { background: #f1f5f9; color: #0f172a; border-color: #94a3b8; }
 
-        /* ALERT */
-        .alert-custom {
-            border-radius: 10px;
-            padding: 0.85rem 1.2rem;
-            margin-bottom: 1.25rem;
-            font-size: 0.875rem;
-            font-weight: 500;
-            display: flex;
-            align-items: center;
-            gap: 0.6rem;
-            border: none;
-        }
-        .alert-success-custom { background: #f0fdf4; color: #166534; }
-        .alert-error-custom   { background: #fef2f2; color: #991b1b; }
+    /* ALERT */
+    .alert-custom {
+        border-radius: 8px;
+        padding: 0.85rem 1.2rem;
+        margin-bottom: 1.25rem;
+        font-size: 0.875rem;
+        font-weight: 500;
+        display: flex;
+        align-items: center;
+        gap: 0.6rem;
+    }
+    .alert-success-custom { background: #f0fdf4; color: #15803d; border: 1px solid #bbf7d0; }
+    .alert-error-custom   { background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; }
 
-        /* GRID LAYOUT */
-        .content-grid {
-            display: grid;
-            grid-template-columns: 340px 1fr;
-            gap: 1.25rem;
-            align-items: start;
-        }
+    /* GRID LAYOUT */
+    .content-grid {
+        display: grid;
+        grid-template-columns: 340px 1fr;
+        gap: 1.25rem;
+        align-items: start;
+    }
 
-        /* FORM CARD */
-        .form-card {
-            background: white;
-            border-radius: 12px;
-            box-shadow: 0 1px 4px rgba(0,0,0,0.06);
-            overflow: hidden;
-        }
+    /* FORM CARD */
+    .form-card {
+        background: #ffffff;
+        border-radius: 12px;
+        border: 1px solid #e2e8f0;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+        overflow: hidden;
+    }
 
-        .form-card-header {
-            padding: 1.1rem 1.5rem;
-            border-bottom: 1px solid #f1f5f9;
-            display: flex;
-            align-items: center;
-            gap: 0.6rem;
-        }
+    .form-card-header {
+        padding: 1.1rem 1.5rem;
+        border-bottom: 1px solid #e2e8f0;
+        background: #f8fafc;
+        display: flex;
+        align-items: center;
+        gap: 0.6rem;
+    }
 
-        .form-card-header h5 {
-            font-size: 0.95rem;
-            font-weight: 700;
-            color: #1e293b;
-            margin: 0;
-        }
+    .form-card-header h5 {
+        font-size: 0.95rem;
+        font-weight: 700;
+        color: #0f172a;
+        margin: 0;
+    }
 
-        .form-card-header i { color: #0f766e; font-size: 1.1rem; }
+    .form-card-header i { color: #0f766e; font-size: 1.1rem; }
 
-        .form-card-body { padding: 1.5rem; }
+    .form-card-body { padding: 1.5rem; }
 
-        .form-label-custom {
-            font-size: 0.8rem;
-            font-weight: 600;
-            color: #475569;
-            text-transform: uppercase;
-            letter-spacing: 0.4px;
-            margin-bottom: 0.4rem;
-            display: block;
-        }
+    .form-label-custom {
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: #334155;
+        text-transform: uppercase;
+        letter-spacing: 0.4px;
+        margin-bottom: 0.4rem;
+        display: block;
+    }
 
-        .form-control-custom {
-            width: 100%;
-            border: 1.5px solid #e2e8f0;
-            border-radius: 8px;
-            padding: 0.6rem 0.9rem;
-            font-size: 0.875rem;
-            color: #1e293b;
-            outline: none;
-            transition: border-color 0.2s, box-shadow 0.2s;
-            background: #fafbff;
-        }
+    .form-control-custom {
+        width: 100%;
+        border: 1px solid #cbd5e1;
+        border-radius: 8px;
+        padding: 0.55rem 0.85rem;
+        font-size: 0.875rem;
+        color: #0f172a;
+        outline: none;
+        transition: border-color 0.15s, background 0.15s;
+        background: #f8fafc;
+    }
 
-        .form-control-custom:focus {
-            border-color: #0f766e;
-            box-shadow: 0 0 0 3px rgba(15,118,110,0.1);
-            background: white;
-        }
+    .form-control-custom:focus {
+        border-color: #0f766e;
+        background: #ffffff;
+    }
 
-        .btn-submit {
-            width: 100%;
-            background: linear-gradient(135deg, #0f766e, #0d9488);
-            color: white;
-            border: none;
-            border-radius: 8px;
-            padding: 0.65rem 1.2rem;
-            font-weight: 600;
-            font-size: 0.875rem;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            gap: 0.4rem;
-            cursor: pointer;
-            transition: all 0.2s;
-            margin-top: 1rem;
-        }
-        .btn-submit:hover { opacity: 0.9; transform: translateY(-1px); }
+    .btn-submit {
+        width: 100%;
+        background: #0f766e;
+        color: white;
+        border: none;
+        border-radius: 8px;
+        padding: 0.6rem 1.2rem;
+        font-weight: 600;
+        font-size: 0.875rem;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.4rem;
+        cursor: pointer;
+        transition: background 0.15s;
+        margin-top: 1rem;
+    }
+    .btn-submit:hover { background: #115e59; }
 
-        /* TABLE CARD */
-        .table-card {
-            background: white;
-            border-radius: 12px;
-            box-shadow: 0 1px 4px rgba(0,0,0,0.06);
-            overflow: hidden;
-        }
+    /* TABLE CARD */
+    .table-card {
+        background: #ffffff;
+        border-radius: 12px;
+        border: 1px solid #e2e8f0;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+        overflow: hidden;
+    }
 
-        .table-card-header {
-            padding: 1.1rem 1.5rem;
-            border-bottom: 1px solid #f1f5f9;
-            display: flex;
-            align-items: center;
-            gap: 0.6rem;
-        }
+    .table-card-header {
+        padding: 1.1rem 1.5rem;
+        border-bottom: 1px solid #e2e8f0;
+        background: #f8fafc;
+        display: flex;
+        align-items: center;
+        gap: 0.6rem;
+    }
 
-        .table-card-header h5 {
-            font-size: 0.95rem;
-            font-weight: 700;
-            color: #1e293b;
-            margin: 0;
-        }
+    .table-card-header h5 {
+        font-size: 0.95rem;
+        font-weight: 700;
+        color: #0f172a;
+        margin: 0;
+    }
 
-        .table-card-header i { color: #0f766e; font-size: 1.1rem; }
+    .table-card-header i { color: #0f766e; font-size: 1.1rem; }
 
-        table { width: 100%; border-collapse: collapse; }
-        thead tr { background: #f8fafc; }
-        th {
-            padding: 0.85rem 1.25rem;
-            text-align: left;
-            font-size: 0.72rem;
-            font-weight: 700;
-            color: #64748b;
-            text-transform: uppercase;
-            letter-spacing: 0.4px;
-            border-bottom: 2px solid #e2e8f0;
-        }
-        td {
-            padding: 0.85rem 1.25rem;
-            border-bottom: 1px solid #f1f5f9;
-            font-size: 0.875rem;
-            color: #1e293b;
-            vertical-align: middle;
-        }
-        tr:last-child td { border-bottom: none; }
-        tr:hover td { background: #fafbff; }
+    table { width: 100%; border-collapse: collapse; }
+    thead tr { background: #f8fafc; }
+    th {
+        padding: 0.85rem 1.25rem;
+        text-align: left;
+        font-size: 0.75rem;
+        font-weight: 700;
+        color: #475569;
+        text-transform: uppercase;
+        letter-spacing: 0.4px;
+        border-bottom: 1px solid #e2e8f0;
+    }
+    td {
+        padding: 0.85rem 1.25rem;
+        border-bottom: 1px solid #f1f5f9;
+        font-size: 0.875rem;
+        color: #1e293b;
+        vertical-align: middle;
+    }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: #f8fafc; }
 
-        .kat-badge {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.35rem;
-            padding: 0.3rem 0.75rem;
-            border-radius: 20px;
-            font-size: 0.75rem;
-            font-weight: 600;
-        }
+    .kat-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        padding: 0.3rem 0.75rem;
+        border-radius: 6px;
+        font-size: 0.75rem;
+        font-weight: 600;
+    }
 
-        .buku-count {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.3rem;
-            font-size: 0.8rem;
-            color: #64748b;
-            font-weight: 500;
-        }
+    .buku-count {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.3rem;
+        font-size: 0.8rem;
+        color: #64748b;
+        font-weight: 500;
+    }
 
-        .btn-edit-row {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            gap: 0.3rem;
-            padding: 0.35rem 0.8rem;
-            border-radius: 7px;
-            font-size: 0.78rem;
-            font-weight: 600;
-            text-decoration: none;
-            background: rgba(37,99,235,0.1);
-            color: #2563eb;
-            border: none;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-        .btn-edit-row:hover { background: #2563eb; color: white; }
+    .btn-edit-row {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.3rem;
+        padding: 0.35rem 0.75rem;
+        border-radius: 6px;
+        font-size: 0.78rem;
+        font-weight: 600;
+        text-decoration: none;
+        background: #eff6ff;
+        color: #1d4ed8;
+        border: 1px solid #bfdbfe;
+        cursor: pointer;
+        transition: background 0.15s, border-color 0.15s;
+    }
+    .btn-edit-row:hover { background: #1d4ed8; color: white; border-color: #1d4ed8; }
 
-        .btn-del-row {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            width: 32px; height: 32px;
-            border-radius: 7px;
-            background: rgba(239,68,68,0.1);
-            color: #dc2626;
-            text-decoration: none;
-            font-size: 0.85rem;
-            border: none;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-        .btn-del-row:hover { background: #ef4444; color: white; }
+    .btn-del-row {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 30px; height: 30px;
+        border-radius: 6px;
+        background: #fee2e2;
+        color: #b91c1c;
+        border: 1px solid #fecaca;
+        text-decoration: none;
+        font-size: 0.82rem;
+        cursor: pointer;
+        transition: background 0.15s, border-color 0.15s;
+    }
+    .btn-del-row:hover { background: #dc2626; color: white; border-color: #dc2626; }
 
-        /* MODAL EDIT */
-        .modal-custom {
-            display: none;
-            position: fixed;
-            inset: 0;
-            z-index: 2000;
-            background: rgba(0,0,0,0.4);
-            backdrop-filter: blur(3px);
-            align-items: center;
-            justify-content: center;
-        }
-        .modal-custom.show { display: flex; }
+    /* MODAL EDIT */
+    .modal-custom {
+        display: none;
+        position: fixed;
+        inset: 0;
+        z-index: 2000;
+        background: rgba(15,23,42,0.6);
+        align-items: center;
+        justify-content: center;
+    }
+    .modal-custom.show { display: flex; }
 
-        .modal-box {
-            background: white;
-            border-radius: 14px;
-            width: 100%;
-            max-width: 420px;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.2);
-            animation: modalIn 0.25s ease;
-        }
+    .modal-box {
+        background: #ffffff;
+        border-radius: 12px;
+        width: 100%;
+        max-width: 420px;
+        border: 1px solid #e2e8f0;
+        box-shadow: 0 10px 25px -5px rgba(0,0,0,0.1);
+        animation: modalIn 0.2s ease;
+    }
 
-        @keyframes modalIn {
-            from { transform: scale(0.92); opacity: 0; }
-            to   { transform: scale(1); opacity: 1; }
-        }
+    @keyframes modalIn {
+        from { transform: scale(0.96); opacity: 0; }
+        to   { transform: scale(1); opacity: 1; }
+    }
 
-        .modal-box-header {
-            padding: 1.2rem 1.5rem;
-            border-bottom: 1px solid #f1f5f9;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-        }
+    .modal-box-header {
+        padding: 1.2rem 1.5rem;
+        border-bottom: 1px solid #e2e8f0;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
 
-        .modal-box-header h5 { font-size: 1rem; font-weight: 700; color: #1e293b; margin: 0; }
+    .modal-box-header h5 { font-size: 1rem; font-weight: 700; color: #0f172a; margin: 0; }
 
-        .btn-close-modal {
-            background: none;
-            border: none;
-            font-size: 1.25rem;
-            color: #94a3b8;
-            cursor: pointer;
-            line-height: 1;
-            padding: 0;
-            transition: color 0.2s;
-        }
-        .btn-close-modal:hover { color: #1e293b; }
+    .btn-close-modal {
+        background: none;
+        border: none;
+        font-size: 1.25rem;
+        color: #64748b;
+        cursor: pointer;
+        line-height: 1;
+        padding: 0;
+        transition: color 0.15s;
+    }
+    .btn-close-modal:hover { color: #0f172a; }
 
-        .modal-box-body { padding: 1.5rem; }
+    .modal-box-body { padding: 1.5rem; }
 
-        .modal-box-footer {
-            padding: 1rem 1.5rem;
-            border-top: 1px solid #f1f5f9;
-            display: flex;
-            gap: 0.75rem;
-            justify-content: flex-end;
-        }
+    .modal-box-footer {
+        padding: 1rem 1.5rem;
+        border-top: 1px solid #e2e8f0;
+        display: flex;
+        gap: 0.75rem;
+        justify-content: flex-end;
+        background: #f8fafc;
+    }
 
-        .btn-cancel {
-            background: #f1f5f9;
-            color: #475569;
-            border: none;
-            border-radius: 8px;
-            padding: 0.55rem 1.2rem;
-            font-weight: 600;
-            font-size: 0.875rem;
-            cursor: pointer;
-            transition: background 0.2s;
-        }
-        .btn-cancel:hover { background: #e2e8f0; }
+    .btn-cancel {
+        background: #ffffff;
+        color: #475569;
+        border: 1px solid #cbd5e1;
+        border-radius: 8px;
+        padding: 0.5rem 1.1rem;
+        font-weight: 600;
+        font-size: 0.875rem;
+        cursor: pointer;
+        transition: background 0.15s, border-color 0.15s;
+    }
+    .btn-cancel:hover { background: #f1f5f9; color: #0f172a; }
 
-        .btn-save {
-            background: linear-gradient(135deg, #0f766e, #0d9488);
-            color: white;
-            border: none;
-            border-radius: 8px;
-            padding: 0.55rem 1.4rem;
-            font-weight: 600;
-            font-size: 0.875rem;
-            cursor: pointer;
-            transition: opacity 0.2s;
-        }
-        .btn-save:hover { opacity: 0.9; }
+    .btn-save {
+        background: #0f766e;
+        color: white;
+        border: none;
+        border-radius: 8px;
+        padding: 0.5rem 1.3rem;
+        font-weight: 600;
+        font-size: 0.875rem;
+        cursor: pointer;
+        transition: background 0.15s;
+    }
+    .btn-save:hover { background: #115e59; }
 
-        /* Empty state */
-        .empty-state {
-            text-align: center;
-            padding: 3rem 1rem;
-            color: #94a3b8;
-        }
-        .empty-state i { font-size: 2.5rem; margin-bottom: 0.75rem; display: block; }
+    /* Empty state */
+    .empty-state {
+        text-align: center;
+        padding: 3rem 1rem;
+        color: #94a3b8;
+    }
+    .empty-state i { font-size: 2.5rem; margin-bottom: 0.75rem; display: block; color: #cbd5e1; }
 
-        /* Mobile */
-        .mobile-toggle {
-            display: none;
-            background: none;
-            border: none;
-            color: white;
-            font-size: 1.5rem;
-            cursor: pointer;
-            margin-right: 1rem;
-        }
+    /* Mobile */
+    .mobile-toggle {
+        display: none;
+        background: none;
+        border: none;
+        color: #f8fafc;
+        font-size: 1.5rem;
+        cursor: pointer;
+        margin-right: 1rem;
+    }
 
-        @media (max-width: 991px) {
-            .mobile-toggle { display: block; }
-            .sidebar { transform: translateX(-100%); transition: transform 0.3s; }
-            .sidebar.show { transform: translateX(0); }
-            .main-content { margin-left: 0; }
-            .content-grid { grid-template-columns: 1fr; }
-        }
-    </style>
+    @media (max-width: 991px) {
+        .mobile-toggle { display: block; }
+        .sidebar { transform: translateX(-100%); transition: transform 0.3s; }
+        .sidebar.show { transform: translateX(0); }
+        .main-content { margin-left: 0; }
+        .content-grid { grid-template-columns: 1fr; }
+    }
+</style>
+    <link rel="stylesheet" href="katalog_styles.css">
 </head>
 <body>
 
@@ -573,15 +582,16 @@ $total_kategori = $conn->query("SELECT COUNT(*) AS c FROM kategori")->fetch_asso
     <button class="mobile-toggle" onclick="toggleSidebar()"><i class="bi bi-list"></i></button>
     <a href="beranda.php" class="brand">
         <img src="logo 40.jpeg" alt="Logo">
-        <span>PerpusOnline</span>
+        <span><?= NAMA_PERPUS ?></span>
     </a>
     <div class="header-right">
         <div class="dropdown">
             <img src="logo 40.jpeg" alt="User" class="user-avatar" data-bs-toggle="dropdown">
             <ul class="dropdown-menu dropdown-menu-end">
                 <li><a class="dropdown-item" href="profile_admin.php"><i class="bi bi-person me-2"></i>Profile</a></li>
+                <li><a class="dropdown-item" href="index.php"><i class="bi bi-globe me-2"></i>Katalog Publik</a></li>
                 <li><hr class="dropdown-divider"></li>
-                <li><a class="dropdown-item" href="logout.php"><i class="bi bi-box-arrow-right me-2"></i>Keluar</a></li>
+                <li><a class="dropdown-item text-danger" href="logout.php"><i class="bi bi-box-arrow-right me-2"></i>Keluar</a></li>
             </ul>
         </div>
     </div>
@@ -598,12 +608,23 @@ $total_kategori = $conn->query("SELECT COUNT(*) AS c FROM kategori")->fetch_asso
             <div class="nav-item"><a href="anggota.php" class="nav-link"><i class="bi bi-people"></i><span>Anggota</span></a></div>
             <div class="nav-item"><a href="peminjaman.php" class="nav-link"><i class="bi bi-clock-history"></i><span>Peminjaman</span></a></div>
             <div class="nav-item"><a href="pengembalian.php" class="nav-link"><i class="bi bi-arrow-return-left"></i><span>Pengembalian</span></a></div>
+            <div class="nav-item">
+                <a href="persetujuan_admin.php" class="nav-link d-flex align-items-center justify-content-between">
+                    <div class="d-flex align-items-center gap-2">
+                        <i class="bi bi-check2-square"></i><span>Persetujuan</span>
+                    </div>
+                    <?php if (!empty($menunggu_acc) && $menunggu_acc > 0): ?>
+                        <span class="badge-notif-sidebar"><?= $menunggu_acc ?></span>
+                    <?php endif; ?>
+                </a>
+            </div>
         </div>
         <div class="sidebar-section">
             <div class="sidebar-title">Lainnya</div>
             <div class="nav-item"><a href="profile_admin.php" class="nav-link"><i class="bi bi-person-circle"></i><span>Profile Admin</span></a></div>
             <div class="nav-item"><a href="tambah_kategori.php" class="nav-link active"><i class="bi bi-tags-fill"></i><span>Kategori</span></a></div>
-            <div class="nav-item"><a href="logout.php" class="nav-link"><i class="bi bi-box-arrow-left"></i><span>Keluar</span></a></div>
+            <div class="nav-item"><a href="index.php" class="nav-link"><i class="bi bi-globe"></i><span>Katalog Publik</span></a></div>
+            <div class="nav-item"><a href="logout.php" class="nav-link text-danger"><i class="bi bi-box-arrow-left"></i><span>Keluar</span></a></div>
         </div>
         <div class="sidebar-user">
             <img src="logo 40.jpeg" alt="User">
@@ -686,14 +707,14 @@ $total_kategori = $conn->query("SELECT COUNT(*) AS c FROM kategori")->fetch_asso
                     $no = 1;
                     // Palet warna untuk badge kategori
                     $palettes = [
-                        ['#8b5cf6','rgba(139,92,246,0.12)'],
-                        ['#3b82f6','rgba(59,130,246,0.12)'],
-                        ['#059669','rgba(5,150,105,0.12)'],
-                        ['#d97706','rgba(217,119,6,0.12)'],
-                        ['#dc2626','rgba(220,38,38,0.12)'],
-                        ['#0891b2','rgba(8,145,178,0.12)'],
-                        ['#7c3aed','rgba(124,58,237,0.12)'],
-                        ['#0f766e','rgba(15,118,110,0.12)'],
+                        ['#1e40af','#eff6ff','1px solid #bfdbfe'],
+                        ['#15803d','#f0fdf4','1px solid #bbf7d0'],
+                        ['#0f766e','#f0fdfa','1px solid #99f6e4'],
+                        ['#b45309','#fffbeb','1px solid #fde68a'],
+                        ['#b91c1c','#fef2f2','1px solid #fecaca'],
+                        ['#0369a1','#f0f9ff','1px solid #bae6fd'],
+                        ['#334155','#f8fafc','1px solid #cbd5e1'],
+                        ['#475569','#f1f5f9','1px solid #e2e8f0'],
                     ];
                     if ($result && $result->num_rows > 0):
                         while ($row = $result->fetch_assoc()):
@@ -702,7 +723,7 @@ $total_kategori = $conn->query("SELECT COUNT(*) AS c FROM kategori")->fetch_asso
                         <tr>
                             <td style="color:#94a3b8;font-weight:600;"><?= $no++ ?></td>
                             <td>
-                                <span class="kat-badge" style="color:<?= $p[0] ?>;background:<?= $p[1] ?>;">
+                                <span class="kat-badge" style="color:<?= $p[0] ?>;background:<?= $p[1] ?>;border:<?= $p[2] ?? "none" ?>;">
                                     <i class="bi bi-tag-fill" style="font-size:0.65rem;"></i>
                                     <?= htmlspecialchars($row['nama_kategori']) ?>
                                 </span>

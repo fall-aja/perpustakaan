@@ -7,6 +7,7 @@ if (!isset($_SESSION['username']) || trim($_SESSION['level']) != 'anggota') {
 
 $conn = new mysqli("localhost", "root", "", "perpustakaan");
 if ($conn->connect_error) die("Koneksi gagal: " . $conn->connect_error);
+require_once 'helper_katalog.php';
 
 $id_user = $_SESSION['id_user'];
 $nama    = $_SESSION['nama'];
@@ -51,15 +52,19 @@ $buku_res = $conn->query("
 ");
 
 $menunggu_res = $conn->query("
-    SELECT p.*, b.judul_buku, b.penulis FROM persetujuan p
+    SELECT p.*, b.judul_buku, b.penulis, b.cover, b.lokasi_rak, k.nama_kategori 
+    FROM persetujuan p
     JOIN buku b ON p.id_buku = b.id_buku
+    LEFT JOIN kategori k ON b.id_kategori = k.id_kategori
     WHERE p.id_user=$id_user AND p.status='menunggu'
     ORDER BY p.tanggal_pengajuan DESC
 ");
 
 $riwayat_res = $conn->query("
-    SELECT p.*, b.judul_buku, b.penulis FROM persetujuan p
+    SELECT p.*, b.judul_buku, b.penulis, b.cover, b.lokasi_rak, k.nama_kategori 
+    FROM persetujuan p
     JOIN buku b ON p.id_buku = b.id_buku
+    LEFT JOIN kategori k ON b.id_kategori = k.id_kategori
     WHERE p.id_user=$id_user AND p.status != 'menunggu'
     ORDER BY p.tanggal_diproses DESC LIMIT 20
 ");
@@ -74,105 +79,109 @@ $jml_menunggu = count($data_menunggu);
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ajukan Pinjam - PerpusOnline</title>
+    <title>Ajukan Pinjam | <?= NAMA_PERPUS ?></title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="katalog_styles.css">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background: #e7e7e7d2; }
-        .main-header { position: fixed; top: 0; left: 0; right: 0; height: 60px; background: linear-gradient(135deg, #2d56b6 0%, #4172c1 100%); box-shadow: 0 2px 10px rgba(0,0,0,0); display: flex; align-items: center; padding: 0 1.5rem; z-index: 1000; }
-        .brand { display: flex; align-items: center; gap: 12px; color: white; text-decoration: none; font-size: 1.25rem; font-weight: 600; }
-        .brand img { width: 32px; height: 32px; border-radius: 50%; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background: #f8fafc; color: #0f172a; }
+        .main-header { position: fixed; top: 0; left: 0; right: 0; height: 60px; background: #0f172a; border-bottom: 1px solid #1e293b; box-shadow: 0 1px 3px rgba(0,0,0,0.05); display: flex; align-items: center; padding: 0 1.5rem; z-index: 1000; }
+        .brand { display: flex; align-items: center; gap: 12px; color: #f8fafc; text-decoration: none; font-size: 1.15rem; font-weight: 700; letter-spacing: 0.2px; }
+        .brand img { width: 32px; height: 32px; border-radius: 50%; border: 1px solid #334155; }
         .search-box { margin-left: auto; display: flex; align-items: center; gap: 1rem; }
-        .search-input { background: rgba(238,238,238,0.24); border: 1px solid rgba(177,177,177,0.53); border-radius: 8px; padding: 0.5rem 1rem; color: white; width: 280px; transition: all 0.3s; }
-        .search-input::placeholder { color: rgba(230,230,230,0.7); }
-        .search-input:focus { background: rgba(255,255,255,0.2); border-color: rgba(255,255,255,0.3); outline: none; width: 320px; }
-        .user-avatar { width: 36px; height: 36px; border-radius: 50%; border: 2px solid rgba(233,233,233,0.8); cursor: pointer; transition: transform 0.2s; background: linear-gradient(135deg,#1d4ed8,#2563eb); display:flex; align-items:center; justify-content:center; color:white; font-weight:700; font-size:0.95rem; text-decoration:none; }
-        .user-avatar:hover { transform: scale(1.05); }
-        .mobile-toggle { display: none; background: none; border: none; color: white; font-size: 1.5rem; cursor: pointer; margin-right: 1rem; }
+        .search-input { background: #1e293b; border: 1px solid #334155; border-radius: 8px; padding: 0.45rem 1rem; color: #f8fafc; width: 260px; font-size: 0.88rem; transition: all 0.2s; outline: none; }
+        .search-input::placeholder { color: #94a3b8; }
+        .search-input:focus { background: #0f172a; border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59,130,246,0.15); width: 300px; }
+        .user-avatar { width: 36px; height: 36px; border-radius: 50%; border: 2px solid #334155; cursor: pointer; transition: border-color 0.2s; background: #1d4ed8; display:flex; align-items:center; justify-content:center; color:white; font-weight:700; font-size:0.95rem; text-decoration:none; }
+        .user-avatar:hover { border-color: #60a5fa; }
+        .mobile-toggle { display: none; background: none; border: none; color: #f8fafc; font-size: 1.4rem; cursor: pointer; margin-right: 1rem; }
         .layout-wrapper { display: flex; padding-top: 60px; min-height: 100vh; }
-        .sidebar { position: fixed; top: 60px; left: 0; bottom: 0; width: 260px; background: linear-gradient(180deg, #0f172a 0%, #1e293b 100%); border-right: 1px solid rgba(255,64,64,0.65); overflow-y: auto; z-index: 900; display: flex; flex-direction: column; }
-        .sidebar-section { padding: 1.5rem 0; }
-        .sidebar-title { font-size: 0.7rem; font-weight: 600; color: rgba(255,255,255,0.4); text-transform: uppercase; letter-spacing: 0.5px; padding: 0 1.5rem; margin-bottom: 0.75rem; }
-        .nav-item { margin: 0.25rem 1rem; }
-        .nav-link { display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem 1rem; color: rgba(245,245,245,0.7); text-decoration: none; border-radius: 8px; transition: all 0.2s; font-size: 0.9rem; }
-        .nav-link:hover { background: linear-gradient(135deg, #2563eb, #1d4ed8); color: white; }
-        .nav-link.active { background: linear-gradient(135deg, #2563eb, #1d4ed8); color: white; box-shadow: 0 4px 12px rgba(37,99,235,0.3); }
+        .sidebar { position: fixed; top: 60px; left: 0; bottom: 0; width: 260px; background: #0f172a; border-right: 1px solid #1e293b; overflow-y: auto; z-index: 900; display: flex; flex-direction: column; }
+        .sidebar-section { padding: 1.25rem 0; }
+        .sidebar-title { font-size: 0.72rem; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.6px; padding: 0 1.5rem; margin-bottom: 0.65rem; }
+        .nav-item { margin: 0.2rem 0.85rem; }
+        .nav-link { display: flex; align-items: center; gap: 0.75rem; padding: 0.65rem 0.95rem; color: #94a3b8; text-decoration: none; border-radius: 8px; transition: background-color 0.15s, color 0.15s; font-size: 0.88rem; font-weight: 500; }
+        .nav-link:hover { background: #1e293b; color: #ffffff; }
+        .nav-link.active { background: #2563eb; color: #ffffff; font-weight: 600; box-shadow: none; }
         .nav-link i { font-size: 1.1rem; width: 20px; }
-        .sidebar-user { margin-top: auto; padding: 1.25rem; border-top: 1px solid rgba(255,255,255,0.7); display: flex; align-items: center; gap: 0.75rem; background: rgba(0,0,0,0.2); }
-        .sidebar-user img { width: 40px; height: 40px; border-radius: 50%; border: 2px solid rgba(227,227,227,0.8); }
-        .sidebar-user-name { font-weight: 600; color: white; font-size: 0.9rem; }
-        .sidebar-user-role { font-size: 0.75rem; color: rgba(255,255,255,0.5); }
-        .main-content { flex: 1; margin-left: 260px; padding: 2rem; }
+        .sidebar-user { margin-top: auto; padding: 1.1rem 1.25rem; border-top: 1px solid #1e293b; display: flex; align-items: center; gap: 0.75rem; background: #0b1120; }
+        .sidebar-user img { width: 38px; height: 38px; border-radius: 50%; border: 2px solid #334155; object-fit: cover; }
+        .sidebar-user-name { font-weight: 600; color: #f8fafc; font-size: 0.88rem; }
+        .sidebar-user-role { font-size: 0.75rem; color: #64748b; text-transform: capitalize; }
+        .main-content { flex: 1; margin-left: 260px; padding: 2rem 2.25rem; }
 
         /* PAGE HEADER */
-        .page-header { background: white; border-radius: 12px; padding: 1.5rem 2rem; box-shadow: 0 2px 8px rgba(0,0,0,0.05); margin-bottom: 1.5rem; display: flex; align-items: center; justify-content: space-between; }
-        .page-title { font-size: 1.5rem; font-weight: 700; color: #4879c8; display: flex; align-items: center; gap: 0.75rem; }
+        .page-header { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 1.25rem 1.75rem; box-shadow: 0 1px 3px rgba(0,0,0,0.03); margin-bottom: 1.5rem; display: flex; align-items: center; justify-content: space-between; }
+        .page-title { font-size: 1.35rem; font-weight: 700; color: #0f172a; display: flex; align-items: center; gap: 0.65rem; }
 
         /* TABS */
-        .tab-wrapper { background: white; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); overflow: hidden; margin-bottom: 1.5rem; }
-        .tab-nav { display: flex; border-bottom: 2px solid #f1f5f9; background: #f8fafc; }
-        .tab-btn { flex: 1; padding: 1rem 1.5rem; background: none; border: none; font-size: 0.9rem; font-weight: 600; color: #64748b; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 0.5rem; border-bottom: 3px solid transparent; margin-bottom: -2px; }
-        .tab-btn:hover { color: #1e293b; background: #f1f5f9; }
-        .tab-btn.active { color: #2563eb; border-bottom-color: #2563eb; background: white; }
-        .tab-count { background: #e2e8f0; color: #64748b; font-size: 0.72rem; padding: 1px 7px; border-radius: 20px; font-weight: 700; }
-        .tab-btn.active .tab-count { background: rgba(37,99,235,0.1); color: #2563eb; }
+        .tab-wrapper { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.03); overflow: hidden; margin-bottom: 1.5rem; }
+        .tab-nav { display: flex; border-bottom: 1px solid #e2e8f0; background: #f8fafc; }
+        .tab-btn { flex: 1; padding: 0.9rem 1.5rem; background: none; border: none; font-size: 0.88rem; font-weight: 600; color: #64748b; cursor: pointer; transition: all 0.15s ease; display: flex; align-items: center; justify-content: center; gap: 0.5rem; border-bottom: 2px solid transparent; margin-bottom: -1px; }
+        .tab-btn:hover { color: #0f172a; background: #f1f5f9; }
+        .tab-btn.active { color: #1d4ed8; border-bottom-color: #1d4ed8; background: #ffffff; }
+        .tab-count { background: #e2e8f0; color: #475569; font-size: 0.72rem; padding: 2px 7px; border-radius: 20px; font-weight: 700; }
+        .tab-btn.active .tab-count { background: #eff6ff; color: #1d4ed8; }
         .tab-pane { display: none; }
         .tab-pane.active { display: block; }
 
         /* FILTER / SEARCH BAR */
-        .filter-bar { padding: 1rem 1.5rem; border-bottom: 1px solid #f1f5f9; display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; }
-        .search-filter { margin-left: auto; display: flex; align-items: center; gap: 0.5rem; }
-        .search-filter input { border: 1.5px solid #e2e8f0; border-radius: 8px; padding: 0.4rem 1rem; font-size: 0.85rem; color: #1e293b; width: 220px; outline: none; transition: border-color 0.2s; }
-        .search-filter input:focus { border-color: #2563eb; }
-        .search-filter button { background: #2563eb; color: white; border: none; border-radius: 8px; padding: 0.4rem 0.85rem; font-size: 0.9rem; cursor: pointer; }
+        .filter-bar { padding: 0.9rem 1.35rem; border-bottom: 1px solid #f1f5f9; display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
+        .search-filter { margin-left: auto; display: flex; align-items: center; gap: 0.4rem; }
+        .search-filter input { border: 1px solid #cbd5e1; border-radius: 8px; padding: 0.4rem 0.85rem; font-size: 0.85rem; color: #0f172a; width: 220px; outline: none; transition: border-color 0.15s, box-shadow 0.15s; }
+        .search-filter input:focus { border-color: #1d4ed8; box-shadow: 0 0 0 3px rgba(29, 78, 216, 0.12); }
+        .search-filter button { background: #1d4ed8; color: white; border: 1px solid #1d4ed8; border-radius: 8px; padding: 0.4rem 0.85rem; font-size: 0.88rem; cursor: pointer; transition: background-color 0.15s; }
+        .search-filter button:hover { background: #1e40af; }
 
         /* BUKU GRID */
-        .buku-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 1rem; padding: 1.25rem 1.5rem; }
-        .buku-card { border: 1.5px solid #e2e8f0; border-radius: 10px; padding: 1.1rem; transition: all 0.2s; background: #fafafa; }
-        .buku-card:hover { border-color: #2563eb; box-shadow: 0 4px 12px rgba(37,99,235,0.1); background: white; }
-        .buku-badge { display: inline-block; background: rgba(37,99,235,0.08); color: #2563eb; padding: 2px 8px; border-radius: 6px; font-size: 0.73rem; margin-bottom: 0.5rem; }
-        .buku-judul { font-weight: 700; font-size: 0.95rem; color: #1e293b; margin-bottom: 0.2rem; }
+        .buku-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 1.25rem; padding: 1.25rem 1.5rem; }
+        .buku-card { border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; transition: transform 0.15s ease, border-color 0.15s ease; background: #ffffff; box-shadow: 0 1px 3px rgba(0,0,0,0.02); display: flex; flex-direction: column; }
+        .buku-card:hover { border-color: #cbd5e1; transform: translateY(-2px); box-shadow: 0 6px 16px rgba(0,0,0,0.06); }
+        .buku-card-cover { position: relative; height: 230px; overflow: hidden; background: #f1f5f9; }
+        .buku-card-body { padding: 1rem 1.15rem; flex: 1; display: flex; flex-direction: column; }
+        .buku-badge { display: inline-block; background: #eff6ff; color: #1d4ed8; border: 1px solid #dbeafe; padding: 2px 8px; border-radius: 4px; font-size: 0.72rem; font-weight: 600; margin-bottom: 0.4rem; width: fit-content; }
+        .buku-judul { font-weight: 700; font-size: 0.95rem; color: #0f172a; margin-bottom: 0.2rem; line-height: 1.35; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
         .buku-penulis { font-size: 0.8rem; color: #64748b; margin-bottom: 0.5rem; }
-        .buku-stok { font-size: 0.8rem; color: #10b981; font-weight: 600; }
-        .btn-ajukan { width: 100%; margin-top: 0.7rem; background: linear-gradient(135deg, #2563eb, #1d4ed8); color: white; border: none; border-radius: 8px; padding: 0.5rem; font-weight: 600; font-size: 0.85rem; cursor: pointer; transition: opacity 0.2s; }
-        .btn-ajukan:hover { opacity: 0.88; }
+        .btn-ajukan { width: 100%; margin-top: auto; background: #1d4ed8; color: white; border: 1px solid #1d4ed8; border-radius: 6px; padding: 0.5rem; font-weight: 600; font-size: 0.82rem; cursor: pointer; transition: background-color 0.15s; }
+        .btn-ajukan:hover { background: #1e40af; }
 
         /* TABLE */
         .table-responsive { overflow-x: auto; }
         table { width: 100%; border-collapse: collapse; }
         thead tr { background: #f8fafc; }
-        th { padding: 0.9rem 1rem; text-align: left; font-size: 0.78rem; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.4px; border-bottom: 2px solid #e2e8f0; white-space: nowrap; }
+        th { padding: 0.85rem 1rem; text-align: left; font-size: 0.75rem; font-weight: 700; color: #475569; text-transform: uppercase; letter-spacing: 0.4px; border-bottom: 1px solid #e2e8f0; white-space: nowrap; }
         td { padding: 0.85rem 1rem; border-bottom: 1px solid #f1f5f9; font-size: 0.88rem; color: #1e293b; vertical-align: middle; }
         tr:last-child td { border-bottom: none; }
         tr:hover td { background: #f8fafc; }
-        .badge-status { padding: 0.3rem 0.75rem; border-radius: 20px; font-size: 0.75rem; font-weight: 600; display: inline-block; white-space: nowrap; }
-        .badge-menunggu  { background: rgba(245,158,11,0.12); color: #d97706; }
-        .badge-disetujui { background: rgba(16,185,129,0.12); color: #059669; }
-        .badge-ditolak   { background: rgba(239,68,68,0.12);  color: #dc2626; }
+        .badge-status { padding: 0.28rem 0.7rem; border-radius: 6px; font-size: 0.75rem; font-weight: 600; display: inline-block; white-space: nowrap; }
+        .badge-menunggu  { background: #fffbeb; color: #b45309; border: 1px solid #fef3c7; }
+        .badge-disetujui { background: #f0fdf4; color: #15803d; border: 1px solid #dcfce7; }
+        .badge-ditolak   { background: #fef2f2; color: #b91c1c; border: 1px solid #fee2e2; }
         .empty-state { text-align: center; padding: 3rem 1rem; color: #94a3b8; }
-        .empty-state i { font-size: 3rem; margin-bottom: 1rem; display: block; }
+        .empty-state i { font-size: 2.8rem; margin-bottom: 0.75rem; display: block; color: #cbd5e1; }
 
         /* MODAL */
-        .modal-content { border: none; border-radius: 16px; }
-        .modal-header { background: linear-gradient(135deg, #2d56b6, #4172c1); color: white; border-radius: 16px 16px 0 0; padding: 1.25rem 1.5rem; }
+        .modal-content { border: 1px solid #e2e8f0; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
+        .modal-header { background: #0f172a; color: white; border-bottom: 1px solid #1e293b; padding: 1.1rem 1.5rem; }
         .modal-header .btn-close { filter: invert(1); }
-        .modal-body { padding: 1.5rem; }
-        .modal-footer { padding: 1rem 1.5rem; border-top: 1px solid #e2e8f0; }
-        .form-label { font-weight: 600; font-size: 0.85rem; color: #374151; }
-        .form-control, .form-select { border: 1.5px solid #e2e8f0; border-radius: 8px; padding: 0.55rem 0.85rem; font-size: 0.9rem; }
-        .form-control:focus, .form-select:focus { border-color: #2563eb; box-shadow: none; }
-        .btn-submit { background: linear-gradient(135deg, #2563eb, #1d4ed8); color: white; border: none; border-radius: 8px; padding: 0.55rem 1.2rem; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 0.4rem; }
+        .modal-body { padding: 1.5rem; background: #ffffff; }
+        .modal-footer { padding: 0.9rem 1.5rem; border-top: 1px solid #e2e8f0; background: #f8fafc; }
+        .form-label { font-weight: 600; font-size: 0.85rem; color: #1e293b; }
+        .form-control, .form-select { border: 1px solid #cbd5e1; border-radius: 6px; padding: 0.5rem 0.85rem; font-size: 0.88rem; }
+        .form-control:focus, .form-select:focus { border-color: #1d4ed8; box-shadow: 0 0 0 3px rgba(29, 78, 216, 0.12); }
+        .btn-submit { background: #1d4ed8; color: white; border: 1px solid #1d4ed8; border-radius: 6px; padding: 0.5rem 1.2rem; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 0.4rem; transition: background-color 0.15s; }
+        .btn-submit:hover { background: #1e40af; }
 
         /* ALERT */
-        .alert-floating { position: fixed; top: 75px; right: 1.5rem; z-index: 9999; min-width: 280px; border-radius: 10px; box-shadow: 0 8px 24px rgba(0,0,0,0.12); animation: slideIn 0.3s ease; }
+        .alert-floating { position: fixed; top: 75px; right: 1.5rem; z-index: 9999; min-width: 280px; border-radius: 8px; border: 1px solid #e2e8f0; box-shadow: 0 4px 12px rgba(0,0,0,0.08); animation: slideIn 0.25s ease; }
         @keyframes slideIn { from { transform: translateX(120%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
 
         @media (max-width: 991px) {
             .mobile-toggle { display: block; }
-            .sidebar { transform: translateX(-100%); transition: transform 0.3s; }
+            .sidebar { transform: translateX(-100%); transition: transform 0.25s ease; }
             .sidebar.show { transform: translateX(0); }
-            .main-content { margin-left: 0; }
+            .main-content { margin-left: 0; padding: 1.5rem 1rem; }
             .search-filter { margin-left: 0; }
             .search-input { width: 180px; }
             .page-header { flex-direction: column; align-items: flex-start; gap: 1rem; }
@@ -186,17 +195,21 @@ $jml_menunggu = count($data_menunggu);
     <button class="mobile-toggle" onclick="toggleSidebar()"><i class="bi bi-list"></i></button>
     <a href="login_anggota.php" class="brand">
         <img src="logo 40.jpeg" alt="Logo" onerror="this.style.display='none'">
-        <span>PerpusOnline</span>
+        <span><?= NAMA_PERPUS ?></span>
     </a>
     <div class="search-box">
-        <input type="text" class="search-input" placeholder="Cari buku...">
+        <a href="login_anggota.php?hal=kartu" class="btn btn-sm btn-outline-light d-none d-md-inline-flex align-items-center gap-1 rounded-pill px-3" style="font-size:0.8rem;">
+            <i class="bi bi-person-badge"></i> Kartu Digital
+        </a>
         <a href="login_anggota.php?hal=profil" class="user-avatar" data-bs-toggle="dropdown" style="text-decoration:none;">
             <?= strtoupper(substr($nama, 0, 1)) ?>
         </a>
         <ul class="dropdown-menu dropdown-menu-dark dropdown-menu-end">
             <li><a class="dropdown-item" href="login_anggota.php?hal=profil"><i class="bi bi-person me-2"></i>Profil Saya</a></li>
+            <li><a class="dropdown-item" href="login_anggota.php?hal=kartu"><i class="bi bi-person-badge me-2"></i>Kartu Perpustakaan</a></li>
+            <li><a class="dropdown-item" href="index.php"><i class="bi bi-globe me-2"></i>Katalog Publik</a></li>
             <li><hr class="dropdown-divider"></li>
-            <li><a class="dropdown-item" href="logout.php"><i class="bi bi-box-arrow-left me-2"></i>Keluar</a></li>
+            <li><a class="dropdown-item text-danger" href="logout.php"><i class="bi bi-box-arrow-left me-2"></i>Keluar</a></li>
         </ul>
     </div>
 </header>
@@ -223,17 +236,23 @@ $jml_menunggu = count($data_menunggu);
     <div class="sidebar-section">
         <div class="sidebar-title">Lainnya</div>
         <div class="nav-item">
-            <a href="login_anggota.php?hal=profil" class="nav-link"><i class="bi bi-person-circle"></i><span>Profile Saya</span></a>
+            <a href="login_anggota.php?hal=kartu" class="nav-link"><i class="bi bi-person-badge"></i><span>Kartu Digital</span></a>
         </div>
         <div class="nav-item">
-            <a href="logout.php" class="nav-link"><i class="bi bi-box-arrow-left"></i><span>Keluar</span></a>
+            <a href="login_anggota.php?hal=profil" class="nav-link"><i class="bi bi-person-circle"></i><span>Profil Saya</span></a>
+        </div>
+        <div class="nav-item">
+            <a href="index.php" class="nav-link"><i class="bi bi-globe"></i><span>Katalog Publik</span></a>
+        </div>
+        <div class="nav-item">
+            <a href="logout.php" class="nav-link text-danger"><i class="bi bi-box-arrow-left"></i><span>Keluar</span></a>
         </div>
     </div>
     <div class="sidebar-user">
         <img src="logo 40.jpeg" alt="User" onerror="this.style.display='none'">
         <div class="sidebar-user-info">
             <div class="sidebar-user-name"><?= htmlspecialchars($nama) ?></div>
-            <div class="sidebar-user-role">Anggota</div>
+            <div class="sidebar-user-role">Siswa Anggota</div>
         </div>
     </div>
 </aside>
@@ -243,45 +262,51 @@ $jml_menunggu = count($data_menunggu);
 
 <?php if (isset($_GET['pesan'])): ?>
     <?php if ($_GET['pesan'] == 'sukses'): ?>
-        <div class="alert alert-success alert-floating">✅ Pengajuan berhasil dikirim! Tunggu persetujuan admin.</div>
+        <div class="alert alert-success alert-floating"><i class="bi bi-check-circle-fill me-2"></i>Pengajuan berhasil dikirim! Tunggu persetujuan admin.</div>
     <?php elseif ($_GET['pesan'] == 'sudah'): ?>
-        <div class="alert alert-warning alert-floating">⚠️ Kamu sudah punya pengajuan menunggu untuk buku ini.</div>
+        <div class="alert alert-warning alert-floating"><i class="bi bi-exclamation-triangle-fill me-2"></i>Kamu sudah punya pengajuan menunggu untuk buku ini.</div>
     <?php elseif ($_GET['pesan'] == 'stok'): ?>
-        <div class="alert alert-danger alert-floating">❌ Stok buku tidak tersedia saat ini.</div>
+        <div class="alert alert-danger alert-floating"><i class="bi bi-x-circle-fill me-2"></i>Stok buku tidak tersedia saat ini.</div>
     <?php endif; ?>
 <?php endif; ?>
 
 <!-- Page Header -->
 <div class="page-header">
-    <h1 class="page-title">
-        <i class="bi bi-send-fill" style="font-size:1.75rem;"></i> Ajukan Pinjam Buku
-    </h1>
+    <div>
+        <h1 class="page-title">
+            <i class="bi bi-send-fill" style="font-size:1.75rem;color:#1d4ed8;"></i> Ajukan Peminjaman Buku
+        </h1>
+        <p class="text-muted small mb-0 mt-1">Pilih judul buku yang tersedia di rak perpustakaan sekolah dan ajukan secara online.</p>
+    </div>
 </div>
 
 <!-- TABS -->
 <div class="tab-wrapper">
     <div class="tab-nav">
         <button class="tab-btn active" onclick="switchTab('katalog', this)">
-            <i class="bi bi-book"></i> Katalog Buku
+            <i class="bi bi-book"></i> Pilih Buku
             <?php if ($buku_res): ?>
                 <span class="tab-count"><?= $buku_res->num_rows ?></span>
             <?php endif; ?>
         </button>
         <button class="tab-btn" onclick="switchTab('menunggu', this)">
-            <i class="bi bi-hourglass-split"></i> Menunggu
+            <i class="bi bi-hourglass-split"></i> Pengajuan Menunggu
             <span class="tab-count"><?= $jml_menunggu ?></span>
         </button>
         <button class="tab-btn" onclick="switchTab('riwayat', this)">
-            <i class="bi bi-clock-history"></i> Riwayat
+            <i class="bi bi-clock-history"></i> Riwayat Pengajuan
         </button>
     </div>
 
     <!-- TAB: KATALOG BUKU -->
     <div class="tab-pane active" id="pane-katalog">
         <div class="filter-bar">
+            <div class="text-muted small">
+                <i class="bi bi-info-circle me-1"></i>Buku dengan stok &gt; 0 yang siap diajukan untuk peminjaman:
+            </div>
             <div class="search-filter">
                 <form method="GET" style="display:flex;gap:0.5rem;">
-                    <input type="text" name="cari" placeholder="Cari judul atau penulis..." value="<?= htmlspecialchars($search) ?>">
+                    <input type="text" name="cari" placeholder="Cari judul / penulis..." value="<?= htmlspecialchars($search) ?>">
                     <button type="submit"><i class="bi bi-search"></i></button>
                 </form>
             </div>
@@ -289,16 +314,30 @@ $jml_menunggu = count($data_menunggu);
 
         <?php if ($buku_res && $buku_res->num_rows > 0): ?>
         <div class="buku-grid">
-        <?php while ($b = $buku_res->fetch_assoc()): ?>
+        <?php while ($b = $buku_res->fetch_assoc()): 
+            $lokasi = $b['lokasi_rak'] ?? 'Rak A-1';
+            $kategori = $b['nama_kategori'] ?? 'Umum';
+            $stok = intval($b['stok']);
+        ?>
             <div class="buku-card">
-                <span class="buku-badge"><?= htmlspecialchars($b['nama_kategori'] ?? 'Umum') ?></span>
-                <div class="buku-judul"><?= htmlspecialchars($b['judul_buku']) ?></div>
-                <div class="buku-penulis"><i class="bi bi-person"></i> <?= htmlspecialchars($b['penulis']) ?></div>
-                <div class="buku-stok"><i class="bi bi-layers"></i> Stok: <?= $b['stok'] ?></div>
-                <button class="btn-ajukan"
-                    onclick="bukaModal(<?= $b['id_buku'] ?>, '<?= addslashes(htmlspecialchars($b['judul_buku'])) ?>', '<?= addslashes(htmlspecialchars($b['penulis'])) ?>')">
-                    <i class="bi bi-send"></i> Ajukan Pinjam
-                </button>
+                <div class="buku-card-cover">
+                    <?= renderBookCover($b['cover'], $b['judul_buku'], $b['penulis'], $kategori, $lokasi) ?>
+                </div>
+                <div class="buku-card-body">
+                    <span class="buku-badge"><?= htmlspecialchars($kategori) ?></span>
+                    <div class="buku-judul" title="<?= htmlspecialchars($b['judul_buku']) ?>"><?= htmlspecialchars($b['judul_buku']) ?></div>
+                    <div class="buku-penulis"><i class="bi bi-person me-1"></i><?= htmlspecialchars($b['penulis']) ?></div>
+                    
+                    <div class="d-flex align-items-center justify-content-between my-2">
+                        <?= renderRakBadge($lokasi) ?>
+                        <?= renderStockBadge($stok) ?>
+                    </div>
+
+                    <button class="btn-ajukan"
+                        onclick="bukaModal(<?= $b['id_buku'] ?>, '<?= addslashes(htmlspecialchars($b['judul_buku'])) ?>', '<?= addslashes(htmlspecialchars($b['penulis'])) ?>')">
+                        <i class="bi bi-send-fill me-1"></i> Ajukan Pinjam
+                    </button>
+                </div>
             </div>
         <?php endwhile; ?>
         </div>
@@ -306,7 +345,7 @@ $jml_menunggu = count($data_menunggu);
             <div class="empty-state">
                 <i class="bi bi-book"></i>
                 <h5>Tidak ada buku tersedia</h5>
-                <p style="font-size:0.85rem;">Coba kata kunci lain atau cek kembali nanti.</p>
+                <p style="font-size:0.85rem;">Coba kata kunci lain atau periksa buku di katalog publik.</p>
             </div>
         <?php endif; ?>
     </div>
@@ -314,35 +353,45 @@ $jml_menunggu = count($data_menunggu);
     <!-- TAB: MENUNGGU -->
     <div class="tab-pane" id="pane-menunggu">
         <?php if ($jml_menunggu > 0): ?>
+        <div class="p-3">
+            <div class="alert alert-info d-flex align-items-center gap-2 mb-3">
+                <i class="bi bi-info-circle-fill flex-shrink-0"></i>
+                <div class="small">Pengajuan di bawah ini sedang dalam antrean peninjauan petugas perpustakaan. Pelacak alur peminjaman akan otomatis bergerak setelah disetujui.</div>
+            </div>
+        </div>
         <div class="table-responsive">
             <table>
                 <thead>
                     <tr>
                         <th>No</th>
-                        <th>Judul Buku</th>
+                        <th>Buku</th>
+                        <th>Lokasi Fisik</th>
                         <th>Tgl Pengajuan</th>
                         <th>Durasi</th>
-                        <th>Alasan</th>
-                        <th>Status</th>
+                        <th>Pelacak Alur Peminjaman</th>
                     </tr>
                 </thead>
                 <tbody>
                 <?php
-                
                 $no = 1;
                 foreach ($data_menunggu as $m): ?>
                     <tr>
                         <td><?= $no++ ?></td>
                         <td>
-                            <div style="font-weight:600;"><?= htmlspecialchars($m['judul_buku']) ?></div>
-                            <div style="font-size:0.78rem;color:#94a3b8;"><?= htmlspecialchars($m['penulis']) ?></div>
+                            <div style="font-weight:700;color:#0f172a;"><?= htmlspecialchars($m['judul_buku']) ?></div>
+                            <div style="font-size:0.78rem;color:#64748b;"><i class="bi bi-person me-1"></i><?= htmlspecialchars($m['penulis']) ?></div>
+                            <?php if (!empty($m['alasan'])): ?>
+                                <div class="small text-muted mt-1 fst-italic">"<?= htmlspecialchars($m['alasan']) ?>"</div>
+                            <?php endif; ?>
                         </td>
+                        <td><?= renderRakBadge($m['lokasi_rak'] ?? 'Rak A-1') ?></td>
                         <td><?= date('d M Y', strtotime($m['tanggal_pengajuan'])) ?></td>
-                        <td><?= $m['durasi_hari'] ?> hari</td>
-                        <td><?= $m['alasan'] ? htmlspecialchars($m['alasan']) : '<span style="color:#94a3b8;">—</span>' ?></td>
-                        <td><span class="badge-status badge-menunggu">⏳ Menunggu</span></td>
+                        <td><span class="badge bg-light text-dark border"><?= $m['durasi_hari'] ?> hari</span></td>
+                        <td style="min-width:320px;">
+                            <?= renderStatusTracker('diajukan') ?>
+                        </td>
                     </tr>
-                <?php endwhile; ?>
+                <?php endforeach; ?>
                 </tbody>
             </table>
         </div>
@@ -350,7 +399,7 @@ $jml_menunggu = count($data_menunggu);
             <div class="empty-state">
                 <i class="bi bi-hourglass"></i>
                 <h5>Tidak Ada Pengajuan Menunggu</h5>
-                <p style="font-size:0.85rem;">Kamu belum punya pengajuan yang sedang menunggu persetujuan.</p>
+                <p style="font-size:0.85rem;">Kamu belum punya pengajuan yang sedang menunggu persetujuan petugas.</p>
             </div>
         <?php endif; ?>
     </div>
@@ -364,10 +413,11 @@ $jml_menunggu = count($data_menunggu);
                     <tr>
                         <th>No</th>
                         <th>Judul Buku</th>
+                        <th>Lokasi Rak</th>
                         <th>Tgl Pengajuan</th>
                         <th>Durasi</th>
-                        <th>Status</th>
-                        <th>Catatan Admin</th>
+                        <th>Status & Alur</th>
+                        <th>Catatan Petugas</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -375,19 +425,23 @@ $jml_menunggu = count($data_menunggu);
                     <tr>
                         <td><?= $no++ ?></td>
                         <td>
-                            <div style="font-weight:600;"><?= htmlspecialchars($r['judul_buku']) ?></div>
-                            <div style="font-size:0.78rem;color:#94a3b8;"><?= htmlspecialchars($r['penulis']) ?></div>
+                            <div style="font-weight:700;color:#0f172a;"><?= htmlspecialchars($r['judul_buku']) ?></div>
+                            <div style="font-size:0.78rem;color:#64748b;"><i class="bi bi-person me-1"></i><?= htmlspecialchars($r['penulis']) ?></div>
                         </td>
+                        <td><?= renderRakBadge($r['lokasi_rak'] ?? 'Rak A-1') ?></td>
                         <td><?= date('d M Y', strtotime($r['tanggal_pengajuan'])) ?></td>
-                        <td><?= $r['durasi_hari'] ?> hari</td>
-                        <td>
+                        <td><span class="badge bg-light text-dark border"><?= $r['durasi_hari'] ?> hari</span></td>
+                        <td style="min-width:300px;">
                             <?php if ($r['status'] == 'disetujui'): ?>
-                                <span class="badge-status badge-disetujui">✅ Disetujui</span>
+                                <?= renderStatusTracker('siap_diambil') ?>
+                                <div class="mt-1 small text-success fw-semibold">
+                                    <i class="bi bi-check-circle me-1"></i>Disetujui! Silakan ambil di <?= htmlspecialchars($r['lokasi_rak'] ?? 'Ruang Perpustakaan') ?>
+                                </div>
                             <?php else: ?>
-                                <span class="badge-status badge-ditolak">❌ Ditolak</span>
+                                <span class="badge-status badge-ditolak"><i class="bi bi-x-circle me-1"></i>Pengajuan Ditolak</span>
                             <?php endif; ?>
                         </td>
-                        <td><?= $r['catatan_admin'] ? htmlspecialchars($r['catatan_admin']) : '<span style="color:#94a3b8;">—</span>' ?></td>
+                        <td><?= $r['catatan_admin'] ? htmlspecialchars($r['catatan_admin']) : '<span style="color:#94a3b8;">-</span>' ?></td>
                     </tr>
                 <?php endwhile; ?>
                 </tbody>
@@ -397,7 +451,7 @@ $jml_menunggu = count($data_menunggu);
             <div class="empty-state">
                 <i class="bi bi-clock-history"></i>
                 <h5>Belum Ada Riwayat</h5>
-                <p style="font-size:0.85rem;">Pengajuan yang sudah diproses admin akan muncul di sini.</p>
+                <p style="font-size:0.85rem;">Pengajuan yang sudah diproses admin perpustakaan akan tercatat di sini.</p>
             </div>
         <?php endif; ?>
     </div>
@@ -412,13 +466,13 @@ $jml_menunggu = count($data_menunggu);
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title"><i class="bi bi-send-fill me-2"></i>Ajukan Pinjam Buku</h5>
+                <h5 class="modal-title"><i class="bi bi-send-fill me-2"></i>Ajukan Peminjaman Buku</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <form method="POST">
                 <input type="hidden" name="id_buku" id="modal_id_buku">
                 <div class="modal-body">
-                    <div style="background:#f8fafc;border-radius:8px;padding:0.9rem;margin-bottom:1.1rem;">
+                    <div style="background:#f8fafc;border-radius:8px;padding:0.9rem;margin-bottom:1.1rem;border:1px solid #e2e8f0;">
                         <div style="font-size:0.78rem;color:#64748b;margin-bottom:0.25rem;">Buku yang dipilih:</div>
                         <div id="modal_judul" style="font-weight:700;color:#1e293b;font-size:1rem;"></div>
                         <div id="modal_penulis" style="font-size:0.8rem;color:#64748b;margin-top:0.15rem;"></div>
@@ -427,14 +481,14 @@ $jml_menunggu = count($data_menunggu);
                         <label class="form-label"><i class="bi bi-calendar-range me-1"></i>Durasi Peminjaman</label>
                         <select name="durasi_hari" class="form-select" required>
                             <option value="3">3 hari</option>
-                            <option value="7" selected>7 hari</option>
-                            <option value="14">14 hari</option>
-                            <option value="30">30 hari</option>
+                            <option value="7" selected>7 hari (Standar Sekolah)</option>
+                            <option value="14">14 hari (Tugas Khusus)</option>
                         </select>
+                        <div class="form-text text-muted" style="font-size:0.75rem;">Aturan perpustakaan: Maksimal peminjaman standar 7 hari.</div>
                     </div>
                     <div class="mb-1">
-                        <label class="form-label"><i class="bi bi-chat-text me-1"></i>Alasan <span style="color:#94a3b8;font-weight:400;">(opsional)</span></label>
-                        <textarea name="alasan" class="form-control" rows="2" placeholder="Keperluan peminjaman..." style="resize:none;"></textarea>
+                        <label class="form-label"><i class="bi bi-chat-text me-1"></i>Keperluan / Alasan <span style="color:#94a3b8;font-weight:400;">(opsional)</span></label>
+                        <textarea name="alasan" class="form-control" rows="2" placeholder="Contoh: Untuk tugas literasi atau referensi belajar..." style="resize:none;"></textarea>
                     </div>
                 </div>
                 <div class="modal-footer">

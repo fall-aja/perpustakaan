@@ -9,6 +9,8 @@ $conn = new mysqli("localhost", "root", "", "perpustakaan");
 if ($conn->connect_error) {
     die("Koneksi gagal: " . $conn->connect_error);
 }
+require_once 'helper_katalog.php';
+$menunggu_acc = $conn->query("SELECT COUNT(*) AS c FROM persetujuan WHERE status='menunggu'")->fetch_assoc()['c'] ?? 0;
 
 // ==================== DETEKSI TABEL USER ====================
 $tabelUser = null;
@@ -59,6 +61,17 @@ if (isset($_GET['kembalikan'])) {
         }
         // 2. Update status peminjaman
         $conn->query("UPDATE peminjaman SET status_peminjaman = 'dikembalikan' WHERE id_peminjaman = $id");
+
+        // 3. Catat ke tabel riwayat pengembalian
+        $id_buku_kembali = intval($row['id_buku']);
+        $id_user_kembali = intval($row['id_user']);
+        $tgl_kembali     = date('Y-m-d');
+        $tgl_jatuh_tempo = !empty($row['tanggal_pengembalian']) ? strtotime($row['tanggal_pengembalian']) : time();
+        $tgl_sekarang    = strtotime($tgl_kembali);
+        $hari_terlambat  = ($tgl_sekarang > $tgl_jatuh_tempo) ? max(0, (int)floor(($tgl_sekarang - $tgl_jatuh_tempo) / 86400)) : 0;
+
+        $conn->query("INSERT INTO pengembalian (id_peminjaman, id_user, id_buku, tanggal_kembali, hari_terlambat) 
+                      VALUES ($id, $id_user_kembali, $id_buku_kembali, '$tgl_kembali', $hari_terlambat)");
         header("Location: pengembalian.php?pesan=kembali_sukses");
     } else {
         header("Location: pengembalian.php?pesan=sudah_kembali");
@@ -108,9 +121,10 @@ $total_selesai   = $conn->query("SELECT COUNT(*) AS c FROM peminjaman WHERE stat
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pengembalian - PerpusOnline</title>
+    <title>Pengembalian | <?= NAMA_PERPUS ?></title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="katalog_styles.css">
     <style>
 
         /* =============================================
@@ -121,7 +135,8 @@ $total_selesai   = $conn->query("SELECT COUNT(*) AS c FROM peminjaman WHERE stat
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
                          'Helvetica Neue', Arial, sans-serif;
-            background: #e7e7e7d2;
+            background: #f8fafc;
+            color: #0f172a;
         }
 
 
@@ -132,8 +147,8 @@ $total_selesai   = $conn->query("SELECT COUNT(*) AS c FROM peminjaman WHERE stat
             position: fixed;
             top: 0; left: 0; right: 0;
             height: 60px;
-            background: linear-gradient(135deg, #2d56b6 0%, #4172c1 100%);
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            background: #0f172a;
+            border-bottom: 1px solid #1e293b;
             display: flex;
             align-items: center;
             padding: 0 1.5rem;
@@ -144,13 +159,13 @@ $total_selesai   = $conn->query("SELECT COUNT(*) AS c FROM peminjaman WHERE stat
             display: flex;
             align-items: center;
             gap: 12px;
-            color: white;
+            color: #f8fafc;
             text-decoration: none;
-            font-size: 1.25rem;
+            font-size: 1.15rem;
             font-weight: 600;
         }
 
-        .brand img { width: 32px; height: 32px; border-radius: 50%; }
+        .brand img { width: 32px; height: 32px; border-radius: 6px; object-fit: cover; }
 
         .search-box {
             margin-left: auto;
@@ -163,12 +178,12 @@ $total_selesai   = $conn->query("SELECT COUNT(*) AS c FROM peminjaman WHERE stat
             width: 36px;
             height: 36px;
             border-radius: 50%;
-            border: 2px solid rgba(233,233,233,0.8);
+            border: 2px solid #334155;
             cursor: pointer;
-            transition: transform 0.2s;
+            transition: opacity 0.2s;
         }
 
-        .user-avatar:hover { transform: scale(1.05); }
+        .user-avatar:hover { opacity: 0.85; }
 
 
         /* =============================================
@@ -188,8 +203,8 @@ $total_selesai   = $conn->query("SELECT COUNT(*) AS c FROM peminjaman WHERE stat
             position: fixed;
             top: 60px; left: 0; bottom: 0;
             width: 260px;
-            background: linear-gradient(180deg, #0f172a 0%, #1e293b 100%);
-            border-right: 1px solid rgba(255,255,255,0.05);
+            background: #0f172a;
+            border-right: 1px solid #1e293b;
             overflow-y: auto;
             z-index: 900;
             display: flex;
@@ -199,35 +214,35 @@ $total_selesai   = $conn->query("SELECT COUNT(*) AS c FROM peminjaman WHERE stat
         .sidebar-section { padding: 1.5rem 0; }
 
         .sidebar-title {
-            font-size: 0.7rem;
+            font-size: 0.72rem;
             font-weight: 600;
-            color: rgba(255,255,255,0.4);
+            color: #64748b;
             text-transform: uppercase;
             letter-spacing: 0.5px;
             padding: 0 1.5rem;
             margin-bottom: 0.75rem;
         }
 
-        .nav-item { margin: 0.25rem 1rem; }
+        .nav-item { margin: 0.25rem 0.875rem; }
 
         .nav-link {
             display: flex;
             align-items: center;
             gap: 0.75rem;
-            padding: 0.75rem 1rem;
-            color: rgba(245,245,245,0.7);
+            padding: 0.7rem 1rem;
+            color: #94a3b8;
             text-decoration: none;
             border-radius: 8px;
-            transition: all 0.2s;
+            transition: background 0.15s, color 0.15s;
             font-size: 0.9rem;
+            font-weight: 500;
         }
 
-        .nav-link:hover { background: rgba(255,255,255,0.05); color: white; }
+        .nav-link:hover { background: #1e293b; color: #f8fafc; }
 
         .nav-link.active {
-            background: linear-gradient(135deg, #2563eb, #1d4ed8);
-            color: white;
-            box-shadow: 0 4px 12px rgba(37,99,235,0.3);
+            background: #2563eb;
+            color: #ffffff;
         }
 
         .nav-link i { font-size: 1.1rem; width: 20px; }
@@ -235,21 +250,22 @@ $total_selesai   = $conn->query("SELECT COUNT(*) AS c FROM peminjaman WHERE stat
         .sidebar-user {
             margin-top: auto;
             padding: 1.25rem;
-            border-top: 1px solid rgba(255,255,255,0.7);
+            border-top: 1px solid #1e293b;
             display: flex;
             align-items: center;
             gap: 0.75rem;
-            background: rgba(0,0,0,0.2);
+            background: #090d16;
         }
 
         .sidebar-user img {
             width: 40px; height: 40px;
             border-radius: 50%;
-            border: 2px solid rgba(227,227,227,0.8);
+            border: 2px solid #334155;
+            object-fit: cover;
         }
 
-        .sidebar-user-name { font-weight: 600; color: white; font-size: 0.9rem; }
-        .sidebar-user-role { font-size: 0.75rem; color: rgba(255,255,255,0.5); }
+        .sidebar-user-name { font-weight: 600; color: #f8fafc; font-size: 0.9rem; }
+        .sidebar-user-role { font-size: 0.75rem; color: #94a3b8; text-transform: capitalize; }
 
 
         /* =============================================
@@ -259,6 +275,7 @@ $total_selesai   = $conn->query("SELECT COUNT(*) AS c FROM peminjaman WHERE stat
             flex: 1;
             margin-left: 260px;
             padding: 2rem;
+            background: #f8fafc;
         }
 
 
@@ -266,10 +283,11 @@ $total_selesai   = $conn->query("SELECT COUNT(*) AS c FROM peminjaman WHERE stat
            PAGE HEADER
         ============================================= */
         .page-header {
-            background: white;
+            background: #ffffff;
             border-radius: 12px;
             padding: 1.5rem 2rem;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.03);
             margin-bottom: 1.5rem;
             display: flex;
             align-items: center;
@@ -277,9 +295,9 @@ $total_selesai   = $conn->query("SELECT COUNT(*) AS c FROM peminjaman WHERE stat
         }
 
         .page-title {
-            font-size: 1.5rem;
+            font-size: 1.4rem;
             font-weight: 700;
-            color: #4879c8;
+            color: #0f172a;
             display: flex;
             align-items: center;
             gap: 0.75rem;
@@ -297,17 +315,21 @@ $total_selesai   = $conn->query("SELECT COUNT(*) AS c FROM peminjaman WHERE stat
         }
 
         .stat-card {
-            background: white;
+            background: #ffffff;
             border-radius: 12px;
             padding: 1.25rem 1.5rem;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.03);
             display: flex;
             align-items: center;
             gap: 1rem;
-            transition: transform 0.2s;
+            transition: transform 0.15s, border-color 0.15s;
         }
 
-        .stat-card:hover { transform: translateY(-3px); }
+        .stat-card:hover { 
+            transform: translateY(-2px);
+            border-color: #cbd5e1;
+        }
 
         .stat-icon {
             width: 48px; height: 48px;
@@ -315,27 +337,28 @@ $total_selesai   = $conn->query("SELECT COUNT(*) AS c FROM peminjaman WHERE stat
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 1.4rem;
+            font-size: 1.35rem;
             flex-shrink: 0;
         }
 
-        .stat-icon.orange { background: rgba(245,158, 11,0.1); color: #f59e0b; }
-        .stat-icon.red    { background: rgba(239, 68, 68,0.1); color: #ef4444; }
-        .stat-icon.yellow { background: rgba(234,179,  8,0.1); color: #ca8a04; }
-        .stat-icon.green  { background: rgba( 16,185,129,0.1); color: #10b981; }
+        .stat-icon.orange { background: #fef3c7; color: #b45309; border: 1px solid #fde68a; }
+        .stat-icon.red    { background: #fee2e2; color: #b91c1c; border: 1px solid #fecaca; }
+        .stat-icon.yellow { background: #fef9c3; color: #a16207; border: 1px solid #fef08a; }
+        .stat-icon.green  { background: #dcfce7; color: #15803d; border: 1px solid #bbf7d0; }
 
-        .stat-label { font-size: 0.8rem; color: #64748b; margin-bottom: 0.2rem; }
-        .stat-value { font-size: 1.75rem; font-weight: 700; color: #1e293b; }
+        .stat-label { font-size: 0.8rem; color: #64748b; margin-bottom: 0.2rem; font-weight: 500; }
+        .stat-value { font-size: 1.75rem; font-weight: 700; color: #0f172a; }
 
 
         /* =============================================
            FILTER BAR
         ============================================= */
         .filter-bar {
-            background: white;
+            background: #ffffff;
             border-radius: 12px;
             padding: 1rem 1.5rem;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.03);
             margin-bottom: 1.5rem;
             display: flex;
             align-items: center;
@@ -344,25 +367,25 @@ $total_selesai   = $conn->query("SELECT COUNT(*) AS c FROM peminjaman WHERE stat
         }
 
         .filter-btn {
-            padding: 0.4rem 1rem;
-            border-radius: 20px;
+            padding: 0.45rem 1rem;
+            border-radius: 8px;
             text-decoration: none;
             font-size: 0.85rem;
             font-weight: 500;
-            border: 1.5px solid #e2e8f0;
-            color: #64748b;
-            transition: all 0.2s;
-            background: transparent;
+            border: 1px solid #cbd5e1;
+            color: #475569;
+            transition: background 0.15s, border-color 0.15s, color 0.15s;
+            background: #ffffff;
             display: inline-flex;
             align-items: center;
-            gap: 0.3rem;
+            gap: 0.4rem;
         }
 
-        .filter-btn:hover  { background: #f1f5f9; color: #1e293b; }
+        .filter-btn:hover  { background: #f1f5f9; color: #0f172a; border-color: #94a3b8; }
 
-        .filter-btn.active         { background: #f59e0b; border-color: #f59e0b; color: white; }
-        .filter-btn.active.red     { background: #ef4444; border-color: #ef4444; color: white; }
-        .filter-btn.active.green   { background: #10b981; border-color: #10b981; color: white; }
+        .filter-btn.active         { background: #d97706; border-color: #d97706; color: #ffffff; }
+        .filter-btn.active.red     { background: #dc2626; border-color: #dc2626; color: #ffffff; }
+        .filter-btn.active.green   { background: #16a34a; border-color: #16a34a; color: #ffffff; }
 
         .search-filter {
             margin-left: auto;
@@ -372,26 +395,33 @@ $total_selesai   = $conn->query("SELECT COUNT(*) AS c FROM peminjaman WHERE stat
         }
 
         .search-filter input {
-            border: 1.5px solid #e2e8f0;
+            border: 1px solid #cbd5e1;
             border-radius: 8px;
-            padding: 0.4rem 1rem;
+            padding: 0.45rem 1rem;
             font-size: 0.85rem;
-            color: #1e293b;
+            color: #0f172a;
             width: 220px;
             outline: none;
-            transition: border-color 0.2s;
+            background: #f8fafc;
+            transition: border-color 0.2s, background 0.2s;
         }
 
-        .search-filter input:focus { border-color: #2563eb; }
+        .search-filter input:focus { border-color: #2563eb; background: #ffffff; }
 
         .search-filter button {
-            background: #2563eb;
-            color: white;
+            background: #1d4ed8;
+            color: #ffffff;
             border: none;
             border-radius: 8px;
-            padding: 0.4rem 0.85rem;
+            padding: 0.45rem 0.9rem;
             font-size: 0.9rem;
+            font-weight: 500;
             cursor: pointer;
+            transition: background 0.15s;
+        }
+
+        .search-filter button:hover {
+            background: #1e40af;
         }
 
 
@@ -399,9 +429,10 @@ $total_selesai   = $conn->query("SELECT COUNT(*) AS c FROM peminjaman WHERE stat
            TABEL
         ============================================= */
         .table-card {
-            background: white;
+            background: #ffffff;
             border-radius: 12px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.03);
             overflow: hidden;
         }
 
@@ -416,10 +447,10 @@ $total_selesai   = $conn->query("SELECT COUNT(*) AS c FROM peminjaman WHERE stat
             text-align: left;
             font-size: 0.78rem;
             font-weight: 700;
-            color: #64748b;
+            color: #475569;
             text-transform: uppercase;
             letter-spacing: 0.4px;
-            border-bottom: 2px solid #e2e8f0;
+            border-bottom: 1px solid #e2e8f0;
             white-space: nowrap;
         }
 
@@ -435,48 +466,48 @@ $total_selesai   = $conn->query("SELECT COUNT(*) AS c FROM peminjaman WHERE stat
         tr:hover td { background: #f8fafc; }
 
         /* Row highlight terlambat */
-        tr.row-terlambat td { background: #fff8f8; }
-        tr.row-terlambat:hover td { background: #fff0f0; }
+        tr.row-terlambat td { background: #fef2f2; }
+        tr.row-terlambat:hover td { background: #fee2e2; }
 
 
         /* =============================================
            BADGE STATUS
         ============================================= */
         .badge-status {
-            padding: 0.3rem 0.75rem;
-            border-radius: 20px;
+            padding: 0.35rem 0.75rem;
+            border-radius: 6px;
             font-size: 0.75rem;
             font-weight: 600;
             display: inline-block;
         }
 
-        .badge-dipinjam     { background: rgba(245,158, 11,0.12); color: #d97706; }
-        .badge-dikembalikan { background: rgba( 16,185,129,0.12); color: #059669; }
-        .badge-terlambat    { background: rgba(239, 68, 68,0.12); color: #dc2626; }
+        .badge-dipinjam     { background: #fef3c7; color: #b45309; border: 1px solid #fde68a; }
+        .badge-dikembalikan { background: #dcfce7; color: #15803d; border: 1px solid #bbf7d0; }
+        .badge-terlambat    { background: #fee2e2; color: #b91c1c; border: 1px solid #fecaca; }
 
 
         /* =============================================
            TOMBOL AKSI
         ============================================= */
         .btn-action {
-            padding: 0.3rem 0.65rem;
+            padding: 0.4rem 0.75rem;
             border-radius: 6px;
             font-size: 0.78rem;
-            font-weight: 500;
+            font-weight: 600;
             text-decoration: none;
             display: inline-flex;
             align-items: center;
-            gap: 0.3rem;
-            border: none;
+            gap: 0.35rem;
+            border: 1px solid transparent;
             cursor: pointer;
-            transition: all 0.2s;
+            transition: background 0.15s, border-color 0.15s;
         }
 
-        .btn-kembali       { background: rgba( 16,185,129,0.1); color: #059669; }
-        .btn-kembali:hover { background: #10b981; color: white; }
+        .btn-kembali       { background: #dcfce7; color: #15803d; border-color: #bbf7d0; }
+        .btn-kembali:hover { background: #15803d; color: #ffffff; border-color: #15803d; }
 
-        .btn-detail        { background: rgba( 37, 99,235,0.1); color: #2563eb; }
-        .btn-detail:hover  { background: #2563eb; color: white; }
+        .btn-detail        { background: #eff6ff; color: #1d4ed8; border-color: #bfdbfe; }
+        .btn-detail:hover  { background: #1d4ed8; color: #ffffff; border-color: #1d4ed8; }
 
 
         /* =============================================
@@ -484,11 +515,11 @@ $total_selesai   = $conn->query("SELECT COUNT(*) AS c FROM peminjaman WHERE stat
         ============================================= */
         .empty-state {
             text-align: center;
-            padding: 3rem 1rem;
+            padding: 3.5rem 1rem;
             color: #94a3b8;
         }
 
-        .empty-state i { font-size: 3rem; margin-bottom: 1rem; display: block; }
+        .empty-state i { font-size: 3rem; margin-bottom: 0.75rem; display: block; color: #cbd5e1; }
 
 
         /* =============================================
@@ -499,8 +530,8 @@ $total_selesai   = $conn->query("SELECT COUNT(*) AS c FROM peminjaman WHERE stat
             top: 75px; right: 1.5rem;
             z-index: 9999;
             min-width: 280px;
-            border-radius: 10px;
-            box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
             animation: slideIn 0.3s ease;
         }
 
@@ -517,7 +548,7 @@ $total_selesai   = $conn->query("SELECT COUNT(*) AS c FROM peminjaman WHERE stat
             display: none;
             background: none;
             border: none;
-            color: white;
+            color: #f8fafc;
             font-size: 1.5rem;
             cursor: pointer;
             margin-right: 1rem;
@@ -559,12 +590,15 @@ $total_selesai   = $conn->query("SELECT COUNT(*) AS c FROM peminjaman WHERE stat
         <img src="logo 40.jpeg" alt="Logo"><span>PerpusOnline</span>
     </a>
     <div class="search-box">
+        <a href="index.php" class="btn btn-outline-light btn-sm rounded-pill px-3 d-none d-sm-inline-flex" style="font-size:0.8rem;">
+            <i class="bi bi-globe me-1"></i>Katalog Publik
+        </a>
         <div class="dropdown">
             <img src="logo 40.jpeg" alt="User" class="user-avatar" data-bs-toggle="dropdown">
             <ul class="dropdown-menu dropdown-menu-end">
                 <li><a class="dropdown-item" href="profile_admin.php"><i class="bi bi-person me-2"></i>Profile</a></li>
                 <li><hr class="dropdown-divider"></li>
-                <li><a class="dropdown-item" href="logout.php"><i class="bi bi-box-arrow-right me-2"></i>Keluar</a></li>
+                <li><a class="dropdown-item text-danger" href="logout.php"><i class="bi bi-box-arrow-right me-2"></i>Keluar</a></li>
             </ul>
         </div>
     </div>
@@ -581,13 +615,24 @@ $total_selesai   = $conn->query("SELECT COUNT(*) AS c FROM peminjaman WHERE stat
             <div class="nav-item"><a href="anggota.php" class="nav-link"><i class="bi bi-people"></i><span>Anggota</span></a></div>
             <div class="nav-item"><a href="peminjaman.php" class="nav-link"><i class="bi bi-clock-history"></i><span>Peminjaman</span></a></div>
             <div class="nav-item"><a href="pengembalian.php" class="nav-link active"><i class="bi bi-arrow-return-left"></i><span>Pengembalian</span></a></div>
-        <div class="nav-item"><a href="persetujuan_admin.php" class="nav-link"><i class="bi bi-check2-square"></i><span>Persetujuan</span></a></div>
+            <div class="nav-item">
+                <a href="persetujuan_admin.php" class="nav-link d-flex align-items-center justify-content-between">
+                    <div class="d-flex align-items-center gap-2">
+                        <i class="bi bi-check2-square"></i>
+                        <span>Persetujuan</span>
+                    </div>
+                    <?php if (!empty($menunggu_acc) && $menunggu_acc > 0): ?>
+                        <span class="sidebar-notif-badge"><?= $menunggu_acc ?></span>
+                    <?php endif; ?>
+                </a>
+            </div>
         </div>
         <div class="sidebar-section">
             <div class="sidebar-title">Lainnya</div>
             <div class="nav-item"><a href="profile_admin.php" class="nav-link"><i class="bi bi-person-circle"></i><span>Profile Admin</span></a></div>
             <div class="nav-item"><a href="tambah_kategori.php" class="nav-link"><i class="bi bi-tags-fill"></i><span>Kategori</span></a></div>
-            <div class="nav-item"><a href="logout.php"        class="nav-link"><i class="bi bi-box-arrow-left"></i><span>Keluar</span></a></div>
+            <div class="nav-item"><a href="index.php" class="nav-link"><i class="bi bi-globe"></i><span>Katalog Publik</span></a></div>
+            <div class="nav-item"><a href="logout.php"        class="nav-link text-danger"><i class="bi bi-box-arrow-left"></i><span>Keluar</span></a></div>
         </div>
         <div class="sidebar-user">
             <img src="logo 40.jpeg" alt="User">
@@ -721,7 +766,7 @@ $total_selesai   = $conn->query("SELECT COUNT(*) AS c FROM peminjaman WHERE stat
                             </td>
                             <td>
                                 <span class="badge-status <?= $badgeClass ?>">
-                                    <?= $statusLabel ?><?= $terlambat ? ' ⚠️' : '' ?>
+                                    <?= $statusLabel ?><?= $terlambat ? ' âš ï¸' : '' ?>
                                 </span>
                             </td>
                             <td>

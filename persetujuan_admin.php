@@ -78,84 +78,88 @@ $result = $conn->query("
 $cnt_menunggu  = $conn->query("SELECT COUNT(*) AS c FROM persetujuan WHERE status='menunggu'")->fetch_assoc()['c'];
 $cnt_disetujui = $conn->query("SELECT COUNT(*) AS c FROM persetujuan WHERE status='disetujui'")->fetch_assoc()['c'];
 $cnt_ditolak   = $conn->query("SELECT COUNT(*) AS c FROM persetujuan WHERE status='ditolak'")->fetch_assoc()['c'];
+require_once 'helper_katalog.php';
 ?>
 <!DOCTYPE html>
 <html lang="id">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Persetujuan Peminjaman - PerpusOnline</title>
+<title>Persetujuan Peminjaman | <?= NAMA_PERPUS ?></title>
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+<link rel="stylesheet" href="katalog_styles.css">
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
-body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f1f5f9; }
-.main-header { position: fixed; top: 0; left: 0; right: 0; height: 60px; background: linear-gradient(135deg, #2d56b6 0%, #4172c1 100%); box-shadow: 0 2px 10px rgba(0,0,0,0.1); display: flex; align-items: center; padding: 0 1.5rem; z-index: 1000; }
-.brand { display: flex; align-items: center; gap: 12px; color: white; text-decoration: none; font-size: 1.25rem; font-weight: 600; }
-.brand img { width: 32px; height: 32px; border-radius: 50%; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f8fafc; color: #0f172a; }
+.main-header { position: fixed; top: 0; left: 0; right: 0; height: 60px; background: #0f172a; border-bottom: 1px solid #1e293b; display: flex; align-items: center; padding: 0 1.5rem; z-index: 1000; }
+.brand { display: flex; align-items: center; gap: 12px; color: #f8fafc; text-decoration: none; font-size: 1.15rem; font-weight: 600; }
+.brand img { width: 32px; height: 32px; border-radius: 6px; object-fit: cover; }
 .search-box { margin-left: auto; display: flex; align-items: center; gap: 1rem; }
-.user-avatar { width: 36px; height: 36px; border-radius: 50%; border: 2px solid rgba(233,233,233,0.8); cursor: pointer; transition: transform 0.2s; }
-.user-avatar:hover { transform: scale(1.05); }
+.user-avatar { width: 36px; height: 36px; border-radius: 50%; border: 2px solid #334155; cursor: pointer; transition: opacity 0.2s; }
+.user-avatar:hover { opacity: 0.85; }
 .layout-wrapper { display: flex; padding-top: 60px; min-height: 100vh; }
-.sidebar { position: fixed; top: 60px; left: 0; bottom: 0; width: 260px; background: linear-gradient(180deg, #0f172a 0%, #1e293b 100%); border-right: 1px solid rgba(255,255,255,0.05); overflow-y: auto; z-index: 900; display: flex; flex-direction: column; }
+.sidebar { position: fixed; top: 60px; left: 0; bottom: 0; width: 260px; background: #0f172a; border-right: 1px solid #1e293b; overflow-y: auto; z-index: 900; display: flex; flex-direction: column; }
 .sidebar-section { padding: 1.5rem 0; }
-.sidebar-title { font-size: 0.7rem; font-weight: 600; color: rgba(255,255,255,0.4); text-transform: uppercase; letter-spacing: 0.5px; padding: 0 1.5rem; margin-bottom: 0.75rem; }
-.nav-item { margin: 0.25rem 1rem; }
-.nav-link { display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem 1rem; color: rgba(245,245,245,0.7); text-decoration: none; border-radius: 8px; transition: all 0.2s; font-size: 0.9rem; }
-.nav-link:hover { background: rgba(255,255,255,0.05); color: white; }
-.nav-link.active { background: linear-gradient(135deg, #2563eb, #1d4ed8); color: white; box-shadow: 0 4px 12px rgba(37,99,235,0.3); }
+.sidebar-title { font-size: 0.72rem; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; padding: 0 1.5rem; margin-bottom: 0.75rem; }
+.nav-item { margin: 0.25rem 0.875rem; }
+.nav-link { display: flex; align-items: center; gap: 0.75rem; padding: 0.7rem 1rem; color: #94a3b8; text-decoration: none; border-radius: 8px; transition: background 0.15s, color 0.15s; font-size: 0.9rem; font-weight: 500; }
+.nav-link:hover { background: #1e293b; color: #f8fafc; }
+.nav-link.active { background: #2563eb; color: #ffffff; }
 .nav-link i { font-size: 1.1rem; width: 20px; }
-.notif-badge { background: #ef4444; color: white; font-size: 0.68rem; padding: 1px 6px; border-radius: 20px; margin-left: auto; font-weight: 700; }
-.sidebar-user { margin-top: auto; padding: 1.25rem; border-top: 1px solid rgba(255,255,255,0.7); display: flex; align-items: center; gap: 0.75rem; background: rgba(0,0,0,0.2); }
-.sidebar-user img { width: 40px; height: 40px; border-radius: 50%; border: 2px solid rgba(227,227,227,0.8); }
-.sidebar-user-name { font-weight: 600; color: white; font-size: 0.9rem; }
-.sidebar-user-role { font-size: 0.75rem; color: rgba(255,255,255,0.5); }
-.main-content { flex: 1; margin-left: 260px; padding: 2rem; }
-.page-header { background: white; border-radius: 12px; padding: 1.5rem 2rem; box-shadow: 0 2px 8px rgba(0,0,0,0.05); margin-bottom: 1.5rem; display: flex; align-items: center; justify-content: space-between; }
-.page-title { font-size: 1.5rem; font-weight: 700; color: #2563eb; display: flex; align-items: center; gap: 0.75rem; }
-.tab-bar { background: white; border-radius: 12px; padding: 1rem 1.5rem; box-shadow: 0 2px 8px rgba(0,0,0,0.05); margin-bottom: 1.5rem; display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap; }
-.tab-btn { padding: 0.4rem 1.1rem; border-radius: 20px; text-decoration: none; font-size: 0.85rem; font-weight: 600; border: 1.5px solid #e2e8f0; color: #64748b; transition: all 0.2s; display: inline-flex; align-items: center; gap: 0.4rem; }
-.tab-btn:hover { background: #f1f5f9; color: #1e293b; }
-.tab-btn.active-orange { background: #f59e0b; border-color: #f59e0b; color: white; }
-.tab-btn.active-green  { background: #10b981; border-color: #10b981; color: white; }
-.tab-btn.active-red    { background: #ef4444; border-color: #ef4444; color: white; }
-.cnt { background: rgba(255,255,255,0.3); padding: 0 6px; border-radius: 20px; font-size: 0.72rem; }
-.cnt-default { background: #e2e8f0; color: #64748b; padding: 0 7px; border-radius: 20px; font-size: 0.72rem; font-weight: 700; }
-.table-card { background: white; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); overflow: hidden; }
+.notif-badge { background: #dc2626; color: white; font-size: 0.68rem; padding: 2px 7px; border-radius: 6px; margin-left: auto; font-weight: 700; }
+.sidebar-user { margin-top: auto; padding: 1.25rem; border-top: 1px solid #1e293b; display: flex; align-items: center; gap: 0.75rem; background: #090d16; }
+.sidebar-user img { width: 40px; height: 40px; border-radius: 50%; border: 2px solid #334155; object-fit: cover; }
+.sidebar-user-name { font-weight: 600; color: #f8fafc; font-size: 0.9rem; }
+.sidebar-user-role { font-size: 0.75rem; color: #94a3b8; text-transform: capitalize; }
+.main-content { flex: 1; margin-left: 260px; padding: 2rem; background: #f8fafc; }
+.page-header { background: #ffffff; border-radius: 12px; padding: 1.5rem 2rem; border: 1px solid #e2e8f0; box-shadow: 0 1px 3px rgba(0,0,0,0.03); margin-bottom: 1.5rem; display: flex; align-items: center; justify-content: space-between; }
+.page-title { font-size: 1.4rem; font-weight: 700; color: #0f172a; display: flex; align-items: center; gap: 0.75rem; }
+.tab-bar { background: #ffffff; border-radius: 12px; padding: 1rem 1.5rem; border: 1px solid #e2e8f0; box-shadow: 0 1px 3px rgba(0,0,0,0.03); margin-bottom: 1.5rem; display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap; }
+.tab-btn { padding: 0.45rem 1rem; border-radius: 8px; text-decoration: none; font-size: 0.85rem; font-weight: 600; border: 1px solid #cbd5e1; color: #475569; transition: background 0.15s, border-color 0.15s, color 0.15s; display: inline-flex; align-items: center; gap: 0.5rem; background: #ffffff; }
+.tab-btn:hover { background: #f1f5f9; color: #0f172a; border-color: #94a3b8; }
+.tab-btn.active-orange { background: #d97706; border-color: #d97706; color: #ffffff; }
+.tab-btn.active-green  { background: #16a34a; border-color: #16a34a; color: #ffffff; }
+.tab-btn.active-red    { background: #dc2626; border-color: #dc2626; color: #ffffff; }
+.cnt { background: rgba(255,255,255,0.25); padding: 1px 7px; border-radius: 6px; font-size: 0.72rem; }
+.cnt-default { background: #e2e8f0; color: #475569; padding: 1px 7px; border-radius: 6px; font-size: 0.72rem; font-weight: 700; }
+.table-card { background: #ffffff; border-radius: 12px; border: 1px solid #e2e8f0; box-shadow: 0 1px 3px rgba(0,0,0,0.03); overflow: hidden; }
 .table-responsive { overflow-x: auto; }
 table { width: 100%; border-collapse: collapse; }
 thead tr { background: #f8fafc; }
-th { padding: 0.9rem 1rem; text-align: left; font-size: 0.78rem; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.4px; border-bottom: 2px solid #e2e8f0; white-space: nowrap; }
+th { padding: 0.9rem 1rem; text-align: left; font-size: 0.78rem; font-weight: 700; color: #475569; text-transform: uppercase; letter-spacing: 0.4px; border-bottom: 1px solid #e2e8f0; white-space: nowrap; }
 td { padding: 0.85rem 1rem; border-bottom: 1px solid #f1f5f9; font-size: 0.88rem; color: #1e293b; vertical-align: middle; }
 tr:last-child td { border-bottom: none; }
 tr:hover td { background: #f8fafc; }
-.badge-status { padding: 0.3rem 0.75rem; border-radius: 20px; font-size: 0.75rem; font-weight: 600; display: inline-block; white-space: nowrap; }
-.badge-menunggu  { background: rgba(245,158,11,0.12); color: #d97706; }
-.badge-disetujui { background: rgba(16,185,129,0.12); color: #059669; }
-.badge-ditolak   { background: rgba(239,68,68,0.12);  color: #dc2626; }
-.btn-action { padding: 0.3rem 0.65rem; border-radius: 6px; font-size: 0.78rem; font-weight: 500; text-decoration: none; display: inline-flex; align-items: center; gap: 0.3rem; border: none; cursor: pointer; transition: all 0.2s; }
-.btn-setujui { background: rgba(16,185,129,0.1); color: #059669; }
-.btn-setujui:hover { background: #10b981; color: white; }
-.btn-tolak   { background: rgba(239,68,68,0.1);  color: #dc2626; }
-.btn-tolak:hover   { background: #ef4444; color: white; }
-.empty-state { text-align: center; padding: 3rem 1rem; color: #94a3b8; }
-.empty-state i { font-size: 3rem; margin-bottom: 1rem; display: block; }
-.modal-content { border: none; border-radius: 16px; }
-.modal-header { background: linear-gradient(135deg, #2563eb, #1d4ed8); color: white; border-radius: 16px 16px 0 0; padding: 1.25rem 1.5rem; }
-.modal-header.red { background: linear-gradient(135deg, #ef4444, #dc2626); }
+.badge-status { padding: 0.35rem 0.75rem; border-radius: 6px; font-size: 0.75rem; font-weight: 600; display: inline-block; white-space: nowrap; }
+.badge-menunggu  { background: #fef3c7; color: #b45309; border: 1px solid #fde68a; }
+.badge-disetujui { background: #dcfce7; color: #15803d; border: 1px solid #bbf7d0; }
+.badge-ditolak   { background: #fee2e2; color: #b91c1c; border: 1px solid #fecaca; }
+.btn-action { padding: 0.35rem 0.75rem; border-radius: 6px; font-size: 0.78rem; font-weight: 600; text-decoration: none; display: inline-flex; align-items: center; gap: 0.35rem; border: 1px solid transparent; cursor: pointer; transition: background 0.15s, border-color 0.15s; }
+.btn-setujui { background: #dcfce7; color: #15803d; border-color: #bbf7d0; }
+.btn-setujui:hover { background: #15803d; color: #ffffff; border-color: #15803d; }
+.btn-tolak   { background: #fee2e2; color: #b91c1c; border-color: #fecaca; }
+.btn-tolak:hover   { background: #dc2626; color: #ffffff; border-color: #dc2626; }
+.empty-state { text-align: center; padding: 3.5rem 1rem; color: #94a3b8; }
+.empty-state i { font-size: 3rem; margin-bottom: 0.75rem; display: block; color: #cbd5e1; }
+.modal-content { border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.1); }
+.modal-header { background: #0f172a; color: #ffffff; border-bottom: 1px solid #1e293b; border-radius: 0; padding: 1.15rem 1.5rem; }
+.modal-header.red { background: #991b1b; border-bottom: 1px solid #7f1d1d; }
 .modal-header .btn-close { filter: invert(1); }
-.modal-body { padding: 1.5rem; }
-.modal-footer { padding: 1rem 1.5rem; border-top: 1px solid #e2e8f0; }
-.form-label { font-weight: 600; font-size: 0.85rem; color: #374151; }
-.form-control { border: 1.5px solid #e2e8f0; border-radius: 8px; padding: 0.55rem 0.85rem; font-size: 0.9rem; }
+.modal-body { padding: 1.5rem; background: #ffffff; }
+.modal-footer { padding: 1rem 1.5rem; border-top: 1px solid #e2e8f0; background: #f8fafc; }
+.form-label { font-weight: 600; font-size: 0.85rem; color: #334155; }
+.form-control { border: 1px solid #cbd5e1; border-radius: 8px; padding: 0.55rem 0.85rem; font-size: 0.9rem; }
 .form-control:focus { border-color: #2563eb; box-shadow: none; }
-.btn-primary-custom { background: linear-gradient(135deg, #10b981, #059669); color: white; border: none; border-radius: 8px; padding: 0.55rem 1.2rem; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 0.4rem; }
-.btn-danger-custom  { background: linear-gradient(135deg, #ef4444, #dc2626); color: white; border: none; border-radius: 8px; padding: 0.55rem 1.2rem; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 0.4rem; }
-.info-box     { background: #f0fdf4; border: 1px solid #86efac; border-radius: 10px; padding: 0.85rem 1rem; margin-bottom: 1rem; font-size: 0.88rem; color: #166534; }
-.info-box-red { background: #fef2f2; border: 1px solid #fca5a5; border-radius: 10px; padding: 0.85rem 1rem; margin-bottom: 1rem; font-size: 0.88rem; color: #991b1b; }
-.alert-floating { position: fixed; top: 75px; right: 1.5rem; z-index: 9999; min-width: 280px; border-radius: 10px; box-shadow: 0 8px 24px rgba(0,0,0,0.12); animation: slideIn 0.3s ease; }
+.btn-primary-custom { background: #15803d; color: white; border: none; border-radius: 8px; padding: 0.55rem 1.2rem; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 0.4rem; transition: background 0.15s; }
+.btn-primary-custom:hover { background: #166534; }
+.btn-danger-custom  { background: #dc2626; color: white; border: none; border-radius: 8px; padding: 0.55rem 1.2rem; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 0.4rem; transition: background 0.15s; }
+.btn-danger-custom:hover  { background: #b91c1c; }
+.info-box     { background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 0.85rem 1rem; margin-bottom: 1rem; font-size: 0.88rem; color: #166534; }
+.info-box-red { background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; padding: 0.85rem 1rem; margin-bottom: 1rem; font-size: 0.88rem; color: #991b1b; }
+.alert-floating { position: fixed; top: 75px; right: 1.5rem; z-index: 9999; min-width: 280px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); animation: slideIn 0.3s ease; }
 @keyframes slideIn { from { transform: translateX(120%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
-.mobile-toggle { display: none; background: none; border: none; color: white; font-size: 1.5rem; cursor: pointer; margin-right: 1rem; }
+.mobile-toggle { display: none; background: none; border: none; color: #f8fafc; font-size: 1.5rem; cursor: pointer; margin-right: 1rem; }
 @media (max-width: 991px) {
     .mobile-toggle { display: block; }
     .sidebar { transform: translateX(-100%); transition: transform 0.3s; }
@@ -173,11 +177,14 @@ tr:hover td { background: #f8fafc; }
         <span>PerpusOnline</span>
     </a>
     <div class="search-box">
+        <a href="index.php" class="btn btn-outline-light btn-sm rounded-pill px-3 d-none d-sm-inline-flex" style="font-size:0.8rem;">
+            <i class="bi bi-globe me-1"></i>Katalog Publik
+        </a>
         <img src="logo 40.jpeg" alt="User" class="user-avatar" data-bs-toggle="dropdown">
         <ul class="dropdown-menu dropdown-menu-dark dropdown-menu-end">
             <li><a class="dropdown-item" href="profile_admin.php">Profile</a></li>
             <li><hr class="dropdown-divider"></li>
-            <li><a class="dropdown-item" href="logout.php">Keluar</a></li>
+            <li><a class="dropdown-item text-danger" href="logout.php">Keluar</a></li>
         </ul>
     </div>
 </header>
@@ -192,10 +199,12 @@ tr:hover td { background: #f8fafc; }
         <div class="nav-item"><a href="peminjaman.php" class="nav-link"><i class="bi bi-clock-history"></i><span>Peminjaman</span></a></div>
         <div class="nav-item"><a href="pengembalian.php" class="nav-link"><i class="bi bi-arrow-return-left"></i><span>Pengembalian</span></a></div>
         <div class="nav-item">
-            <a href="persetujuan_admin.php" class="nav-link active">
-                <i class="bi bi-check2-square"></i><span>Persetujuan</span>
+            <a href="persetujuan_admin.php" class="nav-link active d-flex align-items-center justify-content-between">
+                <div class="d-flex align-items-center gap-2">
+                    <i class="bi bi-check2-square"></i><span>Persetujuan</span>
+                </div>
                 <?php if ($cnt_menunggu > 0): ?>
-                    <span class="notif-badge"><?= $cnt_menunggu ?></span>
+                    <span class="sidebar-notif-badge"><?= $cnt_menunggu ?></span>
                 <?php endif; ?>
             </a>
         </div>
@@ -204,7 +213,8 @@ tr:hover td { background: #f8fafc; }
         <div class="sidebar-title">Lainnya</div>
         <div class="nav-item"><a href="profile_admin.php" class="nav-link"><i class="bi bi-person-circle"></i><span>Profile Admin</span></a></div>
         <div class="nav-item"><a href="tambah_kategori.php" class="nav-link"><i class="bi bi-tags-fill"></i><span>Kategori</span></a></div>
-        <div class="nav-item"><a href="logout.php" class="nav-link"><i class="bi bi-box-arrow-left"></i><span>Keluar</span></a></div>
+        <div class="nav-item"><a href="index.php" class="nav-link"><i class="bi bi-globe"></i><span>Katalog Publik</span></a></div>
+        <div class="nav-item"><a href="logout.php" class="nav-link text-danger"><i class="bi bi-box-arrow-left"></i><span>Keluar</span></a></div>
     </div>
     <div class="sidebar-user">
         <img src="logo 40.jpeg" alt="User">
@@ -219,11 +229,11 @@ tr:hover td { background: #f8fafc; }
 
 <?php if (isset($_GET['pesan'])): ?>
     <?php if ($_GET['pesan'] == 'disetujui'): ?>
-        <div class="alert alert-success alert-floating">✅ Pengajuan berhasil disetujui dan peminjaman dibuat.</div>
+        <div class="alert alert-success alert-floating">âœ… Pengajuan berhasil disetujui dan peminjaman dibuat.</div>
     <?php elseif ($_GET['pesan'] == 'ditolak'): ?>
-        <div class="alert alert-warning alert-floating">❌ Pengajuan berhasil ditolak.</div>
+        <div class="alert alert-warning alert-floating">âŒ Pengajuan berhasil ditolak.</div>
     <?php elseif ($_GET['pesan'] == 'error'): ?>
-        <div class="alert alert-danger alert-floating">⚠️ Terjadi kesalahan. Silakan coba lagi.</div>
+        <div class="alert alert-danger alert-floating">âš ï¸ Terjadi kesalahan. Silakan coba lagi.</div>
     <?php endif; ?>
 <?php endif; ?>
 
@@ -284,14 +294,14 @@ tr:hover td { background: #f8fafc; }
                         <?= $row['durasi_hari'] ?> hari
                         <div style="font-size:0.75rem;color:#94a3b8;">s/d <?= $tgl_kembali ?></div>
                     </td>
-                    <td><?= $row['alasan'] ? htmlspecialchars($row['alasan']) : '<span style="color:#94a3b8;">—</span>' ?></td>
+                    <td><?= $row['alasan'] ? htmlspecialchars($row['alasan']) : '<span style="color:#94a3b8;">â€”</span>' ?></td>
                     <td>
                         <?php if ($row['status'] == 'menunggu'): ?>
-                            <span class="badge-status badge-menunggu">⏳ Menunggu</span>
+                            <span class="badge-status badge-menunggu">â³ Menunggu</span>
                         <?php elseif ($row['status'] == 'disetujui'): ?>
-                            <span class="badge-status badge-disetujui">✅ Disetujui</span>
+                            <span class="badge-status badge-disetujui">âœ… Disetujui</span>
                         <?php else: ?>
-                            <span class="badge-status badge-ditolak">❌ Ditolak</span>
+                            <span class="badge-status badge-ditolak">âŒ Ditolak</span>
                         <?php endif; ?>
                     </td>
                     <td>
@@ -307,7 +317,7 @@ tr:hover td { background: #f8fafc; }
                             </button>
                         </div>
                     <?php else: ?>
-                        <?= $row['catatan_admin'] ? htmlspecialchars($row['catatan_admin']) : '<span style="color:#94a3b8;">—</span>' ?>
+                        <?= $row['catatan_admin'] ? htmlspecialchars($row['catatan_admin']) : '<span style="color:#94a3b8;">â€”</span>' ?>
                         <?php if ($row['tanggal_diproses']): ?>
                             <div style="font-size:0.75rem;color:#94a3b8;">
                                 oleh <?= htmlspecialchars($row['nama_admin'] ?? 'Admin') ?>,
@@ -399,12 +409,12 @@ document.addEventListener('click', function(e) {
 });
 function bukaSetujui(id, anggota, buku) {
     document.getElementById('s_id').value = id;
-    document.getElementById('s_info').innerHTML = '✅ Setujui pengajuan dari <strong>' + anggota + '</strong> untuk buku <strong>' + buku + '</strong>?';
+    document.getElementById('s_info').innerHTML = 'âœ… Setujui pengajuan dari <strong>' + anggota + '</strong> untuk buku <strong>' + buku + '</strong>?';
     new bootstrap.Modal(document.getElementById('modalSetujui')).show();
 }
 function bukaTolak(id, anggota, buku) {
     document.getElementById('t_id').value = id;
-    document.getElementById('t_info').innerHTML = '❌ Tolak pengajuan dari <strong>' + anggota + '</strong> untuk buku <strong>' + buku + '</strong>?';
+    document.getElementById('t_info').innerHTML = 'âŒ Tolak pengajuan dari <strong>' + anggota + '</strong> untuk buku <strong>' + buku + '</strong>?';
     new bootstrap.Modal(document.getElementById('modalTolak')).show();
 }
 setTimeout(() => {

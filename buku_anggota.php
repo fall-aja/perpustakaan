@@ -7,6 +7,7 @@ if (!isset($_SESSION['username']) || trim($_SESSION['level']) != 'anggota') {
 
 $conn = new mysqli("localhost", "root", "", "perpustakaan");
 if ($conn->connect_error) die("Koneksi gagal: " . $conn->connect_error);
+require_once 'helper_katalog.php';
 
 $id_user = $_SESSION['id_user'];
 $nama    = $_SESSION['nama'];
@@ -88,9 +89,10 @@ if ($dp) while ($d = $dp->fetch_assoc()) $dipinjamIds[] = $d['id_buku'];
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Katalog Buku - PerpusOnline</title>
+    <title>Katalog Buku | <?= NAMA_PERPUS ?></title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="katalog_styles.css">
     <style>
 
 /*1. RESET & BASE */
@@ -102,18 +104,20 @@ if ($dp) while ($d = $dp->fetch_assoc()) $dipinjamIds[] = $d['id_buku'];
 
 body {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-    background: #e7e7e7d2;
+    background: #f8fafc;
+    color: #0f172a;
 }
 
-/* 2. HEADER */
+/* 2. HEADER - Solid Slate */
 .main-header {
     position: fixed;
     top: 0;
     left: 0;
     right: 0;
     height: 60px;
-    background: linear-gradient(135deg, #2d56b6, #4172c1);
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    background: #0f172a;
+    border-bottom: 1px solid #1e293b;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
     display: flex;
     align-items: center;
     padding: 0 1.5rem;
@@ -124,16 +128,18 @@ body {
     display: flex;
     align-items: center;
     gap: 12px;
-    color: white;
+    color: #f8fafc;
     text-decoration: none;
-    font-size: 1.25rem;
-    font-weight: 600;
+    font-size: 1.15rem;
+    font-weight: 700;
+    letter-spacing: 0.2px;
 }
 
 .brand img {
     width: 32px;
     height: 32px;
     border-radius: 50%;
+    border: 1px solid #334155;
 }
 
 .header-right {
@@ -147,7 +153,7 @@ body {
     width: 36px;
     height: 36px;
     border-radius: 50%;
-    background: linear-gradient(135deg, #1d4ed8, #2563eb);
+    background: #1d4ed8;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -155,39 +161,40 @@ body {
     font-weight: 700;
     font-size: 0.95rem;
     text-decoration: none;
-    border: 2px solid rgba(255, 255, 255, 0.7);
+    border: 2px solid #334155;
     cursor: pointer;
-    transition: transform 0.2s;
+    transition: border-color 0.2s;
 }
 
 .user-avatar:hover {
-    transform: scale(1.05);
+    border-color: #60a5fa;
 }
 
 .mobile-toggle {
     display: none;
     background: none;
     border: none;
-    color: white;
-    font-size: 1.5rem;
+    color: #f8fafc;
+    font-size: 1.4rem;
     cursor: pointer;
     margin-right: 1rem;
 }
+
 .layout-wrapper {
     display: flex;
     padding-top: 60px;
     min-height: 100vh;
 }
 
-/* 3. SIDEBAR */
+/* 3. SIDEBAR - Solid Slate */
 .sidebar {
     position: fixed;
     top: 60px;
     left: 0;
     bottom: 0;
     width: 260px;
-    background: linear-gradient(180deg, #0f172a, #1e293b);
-    border-right: 1px solid rgba(255, 255, 255, 0.05);
+    background: #0f172a;
+    border-right: 1px solid #1e293b;
     overflow-y: auto;
     z-index: 900;
     display: flex;
@@ -195,44 +202,46 @@ body {
 }
 
 .sidebar-section {
-    padding: 1.5rem 0;
+    padding: 1.25rem 0;
 }
 
 .sidebar-title {
-    font-size: 0.7rem;
-    font-weight: 600;
-    color: rgba(255, 255, 255, 0.4);
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: #64748b;
     text-transform: uppercase;
-    letter-spacing: 0.5px;
+    letter-spacing: 0.6px;
     padding: 0 1.5rem;
-    margin-bottom: 0.75rem;
+    margin-bottom: 0.65rem;
 }
 
 .nav-item {
-    margin: 0.25rem 1rem;
+    margin: 0.2rem 0.85rem;
 }
 
 .nav-link {
     display: flex;
     align-items: center;
     gap: 0.75rem;
-    padding: 0.75rem 1rem;
-    color: rgba(245, 245, 245, 0.7);
+    padding: 0.65rem 0.95rem;
+    color: #94a3b8;
     text-decoration: none;
     border-radius: 8px;
-    transition: all 0.2s;
-    font-size: 0.9rem;
+    transition: background-color 0.15s, color 0.15s;
+    font-size: 0.88rem;
+    font-weight: 500;
 }
 
 .nav-link:hover {
-    background: rgba(255, 255, 255, 0.05);
+    background: #1e293b;
     color: white;
 }
 
 .nav-link.active {
-    background: linear-gradient(135deg, #2563eb, #1d4ed8);
+    background: #2563eb;
     color: white;
-    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+    font-weight: 600;
+    box-shadow: none;
 }
 
 .nav-link i {
@@ -242,50 +251,53 @@ body {
 
 .sidebar-user {
     margin-top: auto;
-    padding: 1.25rem;
-    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 1.1rem 1.25rem;
+    border-top: 1px solid #1e293b;
     display: flex;
     align-items: center;
     gap: 0.75rem;
-    background: rgba(0, 0, 0, 0.2);
+    background: #0b1120;
 }
 
 .sidebar-user-avatar {
-    width: 40px;
-    height: 40px;
+    width: 38px;
+    height: 38px;
     border-radius: 50%;
-    background: linear-gradient(135deg, #2563eb, #7c3aed);
+    background: #1d4ed8;
     display: flex;
     align-items: center;
     justify-content: center;
     color: white;
     font-weight: 700;
-    font-size: 1rem;
+    font-size: 0.95rem;
+    border: 2px solid #334155;
     flex-shrink: 0;
 }
 
 .sidebar-user-name {
     font-weight: 600;
-    color: white;
-    font-size: 0.9rem;
+    color: #f8fafc;
+    font-size: 0.88rem;
 }
 
 .sidebar-user-role {
     font-size: 0.75rem;
-    color: rgba(255, 255, 255, 0.5);
+    color: #64748b;
 }
+
 .main-content {
     flex: 1;
     margin-left: 260px;
-    padding: 2rem;
+    padding: 2rem 2.25rem;
 }
 
 /* 4. PAGE HEADER */
 .page-header {
-    background: white;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
     border-radius: 12px;
     padding: 1.25rem 1.75rem;
-    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
     margin-bottom: 1.25rem;
     display: flex;
     align-items: center;
@@ -297,71 +309,74 @@ body {
 .page-title {
     font-size: 1.35rem;
     font-weight: 700;
-    color: #1e293b;
+    color: #0f172a;
     display: flex;
     align-items: center;
     gap: 0.6rem;
 }
 
 .page-title i {
-    color: #2563eb;
+    color: #1d4ed8;
 }
 
 .total-badge {
-    font-size: 0.8rem;
+    font-size: 0.78rem;
     font-weight: 600;
     background: #eff6ff;
-    color: #2563eb;
+    color: #1d4ed8;
+    border: 1px solid #dbeafe;
     border-radius: 20px;
     padding: 0.2rem 0.65rem;
 }
 
 /* 5. FILTER BAR */
 .filter-bar {
-    background: white;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
     border-radius: 12px;
-    padding: 1rem 1.5rem;
-    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+    padding: 0.9rem 1.35rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
     margin-bottom: 1.25rem;
     display: flex;
     align-items: center;
-    gap: 0.6rem;
+    gap: 0.5rem;
     flex-wrap: wrap;
 }
 
 .filter-label {
-    font-size: 0.78rem;
-    font-weight: 600;
-    color: #94a3b8;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: #64748b;
     text-transform: uppercase;
-    letter-spacing: 0.4px;
+    letter-spacing: 0.5px;
 }
 
 .filter-btn {
-    padding: 0.35rem 0.9rem;
-    border-radius: 20px;
+    padding: 0.35rem 0.85rem;
+    border-radius: 6px;
     text-decoration: none;
-    font-size: 0.83rem;
+    font-size: 0.82rem;
     font-weight: 500;
-    border: 1.5px solid #e2e8f0;
-    color: #475569;
-    background: transparent;
-    transition: all 0.18s;
+    border: 1px solid #cbd5e1;
+    color: #334155;
+    background: #ffffff;
+    transition: all 0.15s ease;
     display: inline-flex;
     align-items: center;
     gap: 0.3rem;
 }
 
 .filter-btn:hover {
-    border-color: #2563eb;
-    color: #2563eb;
+    border-color: #1d4ed8;
+    color: #1d4ed8;
     background: #eff6ff;
 }
 
 .filter-btn.active {
-    background: #2563eb;
-    border-color: #2563eb;
+    background: #1d4ed8;
+    border-color: #1d4ed8;
     color: white;
+    font-weight: 600;
 }
 
 .search-wrap {
@@ -371,57 +386,66 @@ body {
 }
 
 .search-wrap input {
-    border: 1.5px solid #e2e8f0;
+    border: 1px solid #cbd5e1;
     border-radius: 8px;
-    padding: 0.35rem 0.9rem;
-    font-size: 0.83rem;
-    color: #1e293b;
+    padding: 0.4rem 0.85rem;
+    font-size: 0.85rem;
+    color: #0f172a;
     width: 210px;
     outline: none;
-    transition: border-color 0.2s;
+    transition: border-color 0.15s, box-shadow 0.15s;
 }
 
 .search-wrap input:focus {
-    border-color: #2563eb;
+    border-color: #1d4ed8;
+    box-shadow: 0 0 0 3px rgba(29, 78, 216, 0.12);
 }
 
 .search-wrap button {
-    background: #2563eb;
+    background: #1d4ed8;
     color: white;
-    border: none;
+    border: 1px solid #1d4ed8;
     border-radius: 8px;
-    padding: 0.35rem 0.75rem;
-    font-size: 0.9rem;
+    padding: 0.4rem 0.85rem;
+    font-size: 0.88rem;
     cursor: pointer;
+    transition: background-color 0.15s;
+}
+
+.search-wrap button:hover {
+    background: #1e40af;
 }
 
 /* 6. BOOK GRID & CARDS */
 .books-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
     gap: 1.25rem;
 }
 
 .book-card {
-    background: white;
-    border-radius: 14px;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
     overflow: hidden;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.07);
-    transition: transform 0.2s, box-shadow 0.2s;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+    transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
     display: flex;
     flex-direction: column;
 }
 
 .book-card:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 10px 28px rgba(0, 0, 0, 0.13);
+    transform: translateY(-3px);
+    border-color: #cbd5e1;
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.06);
 }
 
 .book-cover {
     position: relative;
-    height: 185px;
+    height: 200px;
     overflow: hidden;
     flex-shrink: 0;
+    background-color: #f1f5f9;
 }
 
 .book-cover img {
@@ -438,49 +462,62 @@ body {
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    padding: 1rem;
+    padding: 1.2rem;
     text-align: center;
     gap: 0.4rem;
+    position: relative;
+}
+
+.cover-gen::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 12px;
+    background: rgba(0,0,0,0.2);
+    border-right: 1px solid rgba(255,255,255,0.15);
 }
 
 .cover-gen .cg-title {
     font-weight: 700;
-    font-size: 0.88rem;
-    line-height: 1.3;
-    color: #fff;
+    font-size: 0.95rem;
+    line-height: 1.35;
+    color: #ffffff;
     word-break: break-word;
 }
 
 .cover-gen .cg-author {
-    font-size: 0.68rem;
-    color: rgba(255, 255, 255, 0.6);
+    font-size: 0.72rem;
+    color: rgba(255, 255, 255, 0.8);
 }
 
 .stok-pill {
     position: absolute;
     top: 9px;
     right: 9px;
-    padding: 0.18rem 0.5rem;
-    border-radius: 20px;
-    font-size: 0.68rem;
+    padding: 0.2rem 0.55rem;
+    border-radius: 6px;
+    font-size: 0.7rem;
     font-weight: 700;
     color: #fff;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
 }
 
 .stok-pill.ok {
-    background: rgba(5, 150, 105, 0.82);
+    background: #15803d;
 }
 
 .stok-pill.low {
-    background: rgba(217, 119, 6, 0.82);
+    background: #b45309;
 }
 
 .stok-pill.zero {
-    background: rgba(220, 38, 38, 0.82);
+    background: #b91c1c;
 }
 
 .book-body {
-    padding: 0.85rem 0.95rem 0.75rem;
+    padding: 0.9rem 1rem 0.85rem;
     flex: 1;
     display: flex;
     flex-direction: column;
@@ -488,20 +525,21 @@ body {
 
 .bc-kat {
     display: inline-block;
-    padding: 0.18rem 0.55rem;
-    border-radius: 10px;
-    font-size: 0.67rem;
+    padding: 0.2rem 0.55rem;
+    border-radius: 4px;
+    font-size: 0.68rem;
     font-weight: 600;
-    margin-bottom: 0.4rem;
+    margin-bottom: 0.45rem;
     width: fit-content;
+    border: 1px solid transparent;
 }
 
 .bc-title {
-    font-size: 0.9rem;
+    font-size: 0.92rem;
     font-weight: 700;
-    color: #1e293b;
+    color: #0f172a;
     line-height: 1.35;
-    margin-bottom: 0.22rem;
+    margin-bottom: 0.25rem;
     display: -webkit-box;
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
@@ -509,63 +547,61 @@ body {
 }
 
 .bc-author {
-    font-size: 0.73rem;
+    font-size: 0.75rem;
     color: #64748b;
     display: flex;
     align-items: center;
     gap: 0.25rem;
-    margin-bottom: 0.75rem;
+    margin-bottom: 0.8rem;
 }
 
 .bc-actions {
     margin-top: auto;
-    padding-top: 0.6rem;
+    padding-top: 0.65rem;
     border-top: 1px solid #f1f5f9;
 }
 
-/* ────────────────────────────────────────────
-   7. BUTTONS
-   ──────────────────────────────────────────── */
+/* 7. BUTTONS */
 .btn-pinjam {
     width: 100%;
     padding: 0.5rem 0.6rem;
-    border: none;
-    border-radius: 8px;
-    font-size: 0.8rem;
+    border: 1px solid #1d4ed8;
+    border-radius: 6px;
+    font-size: 0.82rem;
     font-weight: 600;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
     gap: 0.35rem;
-    transition: all 0.18s;
-    background: linear-gradient(135deg, #2563eb, #1d4ed8);
+    transition: background-color 0.15s ease;
+    background: #1d4ed8;
     color: white;
 }
 
 .btn-pinjam:hover {
-    opacity: 0.9;
-    transform: translateY(-1px);
+    background: #1e40af;
+    border-color: #1e40af;
 }
 
 .btn-pinjam:disabled,
 .btn-pinjam.sudah {
-    background: #e2e8f0;
+    background: #f1f5f9;
+    border-color: #e2e8f0;
     color: #94a3b8;
     cursor: not-allowed;
     transform: none;
 }
 
 .btn-pinjam.habis {
-    background: rgba(239, 68, 68, 0.1);
-    color: #dc2626;
+    background: #fef2f2;
+    border-color: #fee2e2;
+    color: #b91c1c;
     cursor: not-allowed;
     transform: none;
 }
 
-/* ────────────────────────────────────────────
-   8. EMPTY STATE
-   ──────────────────────────────────────────── */
+/* 8. EMPTY STATE */
 .empty-state {
     text-align: center;
     padding: 4rem 1rem;
@@ -574,29 +610,29 @@ body {
 }
 
 .empty-state i {
-    font-size: 3rem;
+    font-size: 2.8rem;
     display: block;
     margin-bottom: 0.75rem;
+    color: #cbd5e1;
 }
 
 .empty-state h5 {
     font-size: 1.05rem;
-    color: #64748b;
+    color: #475569;
     margin-bottom: 0.35rem;
 }
 
-/* ────────────────────────────────────────────
-   9. ALERT FLOATING
-   ──────────────────────────────────────────── */
+/* 9. ALERT FLOATING */
 .alert-floating {
     position: fixed;
     top: 72px;
     right: 1.5rem;
     z-index: 9999;
     min-width: 280px;
-    border-radius: 10px;
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
-    animation: slideIn 0.3s ease;
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    animation: slideIn 0.25s ease;
 }
 
 @keyframes slideIn {
@@ -610,24 +646,22 @@ body {
     }
 }
 
-/* ────────────────────────────────────────────
-   10. MODAL PINJAM
-   ──────────────────────────────────────────── */
+/* 10. MODAL PINJAM */
 .modal-pinjam .modal-content {
-    border: none;
-    border-radius: 16px;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
     overflow: hidden;
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.18);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
 }
 
 .modal-pinjam .modal-header {
-    background: linear-gradient(135deg, #2563eb, #1d4ed8);
-    border: none;
+    background: #0f172a;
+    border-bottom: 1px solid #1e293b;
     padding: 1.1rem 1.5rem;
 }
 
 .modal-pinjam .modal-title {
-    color: white;
+    color: #f8fafc;
     font-weight: 700;
     font-size: 1rem;
     display: flex;
@@ -636,7 +670,7 @@ body {
 }
 
 .modal-pinjam .btn-close {
-    filter: invert(1) brightness(2);
+    filter: invert(1);
     opacity: 0.8;
 }
 
@@ -646,7 +680,7 @@ body {
 }
 
 .modal-pinjam .modal-footer {
-    background: #f8fafc;
+    background: #ffffff;
     border-top: 1px solid #e2e8f0;
     padding: 0.9rem 1.5rem;
 }
@@ -657,19 +691,19 @@ body {
     align-items: center;
     gap: 1rem;
     background: white;
-    border-radius: 10px;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
     padding: 1rem;
     margin-bottom: 1.25rem;
-    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
 }
 
 .modal-book-cover {
     width: 56px;
     height: 76px;
-    border-radius: 7px;
+    border-radius: 4px;
     overflow: hidden;
     flex-shrink: 0;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    border: 1px solid #e2e8f0;
 }
 
 .modal-book-cover img {
@@ -686,7 +720,7 @@ body {
     justify-content: center;
     font-size: 0.6rem;
     font-weight: 700;
-    color: rgba(255, 255, 255, 0.8);
+    color: #ffffff;
     text-align: center;
     padding: 0.25rem;
     line-height: 1.2;
@@ -694,7 +728,7 @@ body {
 
 .modal-book-title {
     font-weight: 700;
-    color: #1e293b;
+    color: #0f172a;
     font-size: 0.95rem;
     line-height: 1.3;
     margin-bottom: 0.2rem;
@@ -707,31 +741,31 @@ body {
 
 .modal-stok {
     font-size: 0.75rem;
-    color: #059669;
+    color: #15803d;
     font-weight: 600;
     margin-top: 0.3rem;
 }
 
 .modal-stok.low {
-    color: #d97706;
+    color: #b45309;
 }
 
 .modal-stok.zero {
-    color: #dc2626;
+    color: #b91c1c;
 }
 
 /* Form Tanggal di Modal */
 .tgl-section {
     background: white;
-    border-radius: 10px;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
     padding: 1.1rem;
-    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
 }
 
 .tgl-section label {
     font-size: 0.78rem;
     font-weight: 600;
-    color: #374151;
+    color: #1e293b;
     margin-bottom: 0.35rem;
     display: flex;
     align-items: center;
@@ -739,28 +773,28 @@ body {
 }
 
 .tgl-section label i {
-    color: #2563eb;
+    color: #1d4ed8;
 }
 
 .tgl-section input[type="date"] {
     width: 100%;
-    border: 1.5px solid #e2e8f0;
-    border-radius: 8px;
-    padding: 0.55rem 0.85rem;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    padding: 0.5rem 0.85rem;
     font-size: 0.875rem;
-    color: #1e293b;
+    color: #0f172a;
     outline: none;
-    transition: border-color 0.18s;
+    transition: border-color 0.15s;
 }
 
 .tgl-section input[type="date"]:focus {
-    border-color: #2563eb;
-    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+    border-color: #1d4ed8;
+    box-shadow: 0 0 0 3px rgba(29, 78, 216, 0.12);
 }
 
 .tgl-section .tgl-info {
     font-size: 0.72rem;
-    color: #94a3b8;
+    color: #64748b;
     margin-top: 0.4rem;
     display: flex;
     align-items: center;
@@ -768,7 +802,7 @@ body {
 }
 
 .tgl-section .tgl-info.warn {
-    color: #d97706;
+    color: #b45309;
 }
 
 /* Tanggal Pinjam (Readonly) */
@@ -777,62 +811,61 @@ body {
     align-items: center;
     gap: 0.5rem;
     padding: 0.5rem 0.85rem;
-    background: #f1f5f9;
-    border-radius: 8px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
     font-size: 0.82rem;
     color: #64748b;
     margin-bottom: 1rem;
 }
 
 .tgl-pinjam-row i {
-    color: #2563eb;
+    color: #1d4ed8;
 }
 
 .tgl-pinjam-row strong {
-    color: #1e293b;
+    color: #0f172a;
 }
 
 /* Modal Buttons */
 .btn-modal-save {
-    background: linear-gradient(135deg, #2563eb, #1d4ed8);
+    background: #1d4ed8;
     color: white;
-    border: none;
-    border-radius: 8px;
-    padding: 0.6rem 1.4rem;
+    border: 1px solid #1d4ed8;
+    border-radius: 6px;
+    padding: 0.55rem 1.3rem;
     font-size: 0.875rem;
     font-weight: 600;
     cursor: pointer;
     display: inline-flex;
     align-items: center;
     gap: 0.4rem;
-    transition: all 0.2s;
+    transition: background-color 0.15s ease;
 }
 
 .btn-modal-save:hover {
-    opacity: 0.9;
-    transform: translateY(-1px);
+    background: #1e40af;
+    border-color: #1e40af;
 }
 
 .btn-modal-cancel {
     background: transparent;
-    color: #64748b;
-    border: 1.5px solid #e2e8f0;
-    border-radius: 8px;
-    padding: 0.6rem 1.1rem;
+    color: #475569;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    padding: 0.55rem 1.1rem;
     font-size: 0.875rem;
     font-weight: 500;
     cursor: pointer;
-    transition: all 0.18s;
+    transition: all 0.15s ease;
 }
 
 .btn-modal-cancel:hover {
     background: #f1f5f9;
-    color: #1e293b;
+    color: #0f172a;
 }
 
-/* ────────────────────────────────────────────
-   13. RESPONSIVE
-   ──────────────────────────────────────────── */
+/* 13. RESPONSIVE */
 @media (max-width: 991px) {
     .mobile-toggle {
         display: block;
@@ -840,7 +873,7 @@ body {
 
     .sidebar {
         transform: translateX(-100%);
-        transition: transform 0.3s;
+        transition: transform 0.25s ease;
     }
 
     .sidebar.show {
@@ -849,6 +882,7 @@ body {
 
     .main-content {
         margin-left: 0;
+        padding: 1.5rem 1rem;
     }
 
     .search-wrap {
@@ -858,7 +892,7 @@ body {
 
 @media (max-width: 576px) {
     .main-content {
-        padding: 1.25rem;
+        padding: 1.25rem 1rem;
     }
 
     .page-header {
@@ -946,25 +980,38 @@ body {
     </div>
 
     <!-- Filter bar -->
-    <div class="filter-bar">
-        <span class="filter-label"><i class="bi bi-funnel me-1"></i>Kategori</span>
+    <div class="category-pills-bar mb-3">
         <a href="buku_anggota.php<?= $search ? '?search='.urlencode($search) : '' ?>"
-           class="filter-btn <?= $kategori_filter===''?'active':'' ?>">
-            <i class="bi bi-grid-3x3-gap"></i> Semua
+           class="cat-pill <?= $kategori_filter===''?'active':'' ?>">
+            <i class="bi bi-grid-fill"></i> Semua
         </a>
         <?php
-        if ($kategoriList) while ($kat = $kategoriList->fetch_assoc()):
-            $kn   = $kat['nama_kategori'];
-            $href = 'buku_anggota.php?kategori='.urlencode($kn).($search?'&search='.urlencode($search):'');
+        if ($kategoriList) {
+            mysqli_data_seek($kategoriList, 0);
+            while ($kat = $kategoriList->fetch_assoc()):
+                $kn   = $kat['nama_kategori'];
+                $href = 'buku_anggota.php?kategori='.urlencode($kn).($search?'&search='.urlencode($search):'');
+                $isActive = (strtolower($kategori_filter) === strtolower($kn));
         ?>
-        <a href="<?= $href ?>" class="filter-btn <?= strtolower($kategori_filter)===strtolower($kn)?'active':'' ?>">
+        <a href="<?= $href ?>" class="cat-pill <?= $isActive ? 'active' : '' ?>">
+            <?php 
+                $kl = strtolower($kn);
+                if (strpos($kl, 'fiksi') !== false || strpos($kl, 'novel') !== false) echo '<i class="bi bi-journal-bookmark"></i>';
+                elseif (strpos($kl, 'pendidikan') !== false || strpos($kl, 'pelajaran') !== false) echo '<i class="bi bi-mortarboard"></i>';
+                elseif (strpos($kl, 'sains') !== false) echo '<i class="bi bi-cpu"></i>';
+                elseif (strpos($kl, 'komik') !== false) echo '<i class="bi bi-brush"></i>';
+                elseif (strpos($kl, 'biografi') !== false) echo '<i class="bi bi-person-lines-fill"></i>';
+                else echo '<i class="bi bi-tag"></i>';
+            ?>
             <?= htmlspecialchars($kn) ?>
         </a>
-        <?php endwhile; ?>
+        <?php endwhile; } ?>
+    </div>
 
-        <form method="GET" class="search-wrap">
+    <div class="filter-bar mb-4">
+        <form method="GET" class="search-wrap w-100">
             <?php if ($kategori_filter): ?><input type="hidden" name="kategori" value="<?= htmlspecialchars($kategori_filter) ?>"><?php endif; ?>
-            <input type="text" name="search" placeholder="Cari judul / penulis..." value="<?= htmlspecialchars($search) ?>">
+            <input type="text" name="search" placeholder="Cari judul / penulis / nomor rak..." value="<?= htmlspecialchars($search) ?>" class="w-100">
             <button type="submit"><i class="bi bi-search"></i></button>
         </form>
     </div>
@@ -972,40 +1019,13 @@ body {
     <!-- Book grid -->
     <div class="books-grid">
     <?php
-    // Helper warna kategori
-    function katClr($k) {
-        $k = strtolower($k??'');
-        if(strpos($k,'novel')!==false)                              return['#10b981','rgba(16,185,129,.13)'];
-        if(strpos($k,'sains')!==false)                              return['#f59e0b','rgba(245,158,11,.13)'];
-        if(strpos($k,'fiksi')!==false&&strpos($k,'non')===false)    return['#8b5cf6','rgba(139,92,246,.13)'];
-        if(strpos($k,'non')!==false)                                return['#3b82f6','rgba(59,130,246,.13)'];
-        if(strpos($k,'pendidikan')!==false)                         return['#059669','rgba(5,150,105,.13)'];
-        if(strpos($k,'biografi')!==false)                           return['#d97706','rgba(217,119,6,.13)'];
-        if(strpos($k,'sejarah')!==false)                            return['#dc2626','rgba(220,38,38,.13)'];
-        return['#6366f1','rgba(99,102,241,.13)'];
-    }
-    function coverGrad($k,$j) {
-        $k=strtolower($k??'');
-        if(strpos($k,'novel')!==false)                              return['#134e4a','#0d9488'];
-        if(strpos($k,'sains')!==false)                              return['#78350f','#d97706'];
-        if(strpos($k,'fiksi')!==false&&strpos($k,'non')===false)   return['#4c1d95','#7c3aed'];
-        if(strpos($k,'non')!==false)                                return['#1e3a5f','#1d4ed8'];
-        if(strpos($k,'pendidikan')!==false)                         return['#064e3b','#059669'];
-        if(strpos($k,'biografi')!==false)                           return['#78350f','#c2410c'];
-        if(strpos($k,'sejarah')!==false)                            return['#7f1d1d','#dc2626'];
-        $p=[['#1e1b4b','#4338ca'],['#134e4a','#0f766e'],['#4a044e','#a21caf'],['#0c4a6e','#0369a1']];
-        return $p[abs(crc32($j))%count($p)];
-    }
-
     if ($result && $result->num_rows > 0):
         while ($buku = $result->fetch_assoc()):
             $kNama    = $buku['nama_kategori'] ?? 'Umum';
             $stok     = intval($buku['stok'] ?? 0);
             $hasCover = !empty($buku['cover']) && file_exists('covers/'.$buku['cover']);
             $sudah    = in_array($buku['id_buku'], $dipinjamIds);
-            [$kc,$kb] = katClr($kNama);
-            [$g1,$g2] = coverGrad($kNama, $buku['judul_buku']);
-            $spCls    = $stok===0?'zero':($stok<=3?'low':'ok');
+            $lokasi   = $buku['lokasi_rak'] ?? 'Rak A-1';
 
             // Data untuk modal (encode JSON aman)
             $modalData = json_encode([
@@ -1014,32 +1034,28 @@ body {
                 'penulis'=> $buku['penulis'] ?? '',
                 'stok'   => $stok,
                 'cover'  => $hasCover ? 'covers/'.htmlspecialchars($buku['cover']) : '',
-                'g1'     => $g1, 'g2' => $g2,
+                'lokasi' => $lokasi,
+                'kategori'=> $kNama
             ], JSON_HEX_APOS|JSON_HEX_QUOT);
     ?>
         <div class="book-card">
             <div class="book-cover">
-                <?php if ($hasCover): ?>
-                    <img src="covers/<?= htmlspecialchars($buku['cover']) ?>"
-                         alt="<?= htmlspecialchars($buku['judul_buku']) ?>">
-                <?php else: ?>
-                    <div class="cover-gen"
-                         style="background:linear-gradient(155deg,<?= $g1 ?>,<?= $g2 ?>);">
-                        <div class="cg-title"><?= htmlspecialchars($buku['judul_buku']) ?></div>
-                        <div class="cg-author"><?= htmlspecialchars($buku['penulis'] ?? '') ?></div>
-                    </div>
-                <?php endif; ?>
-                <span class="stok-pill <?= $spCls ?>"><?= $stok ?> eks</span>
+                <?= renderBookCover($buku['cover'], $buku['judul_buku'], $buku['penulis'], $kNama, $lokasi) ?>
             </div>
 
             <div class="book-body">
-                <span class="bc-kat" style="color:<?= $kc ?>;background:<?= $kb ?>;">
+                <span class="bc-kat">
                     <?= htmlspecialchars($kNama) ?>
                 </span>
                 <div class="bc-title"><?= htmlspecialchars($buku['judul_buku']) ?></div>
                 <div class="bc-author">
                     <i class="bi bi-person" style="font-size:.68rem;"></i>
                     <?= htmlspecialchars($buku['penulis'] ?? '-') ?>
+                </div>
+
+                <div class="d-flex align-items-center justify-content-between my-2">
+                    <?= renderRakBadge($lokasi) ?>
+                    <?= renderStockBadge($stok) ?>
                 </div>
 
                 <div class="bc-actions">
@@ -1098,9 +1114,9 @@ body {
                             <!-- diisi JS -->
                         </div>
                         <div style="flex:1;">
-                            <div class="modal-book-title" id="modalJudul">—</div>
-                            <div class="modal-book-author" id="modalPenulis">—</div>
-                            <div class="modal-stok" id="modalStok">—</div>
+                            <div class="modal-book-title" id="modalJudul">â€”</div>
+                            <div class="modal-book-author" id="modalPenulis">â€”</div>
+                            <div class="modal-stok" id="modalStok">â€”</div>
                         </div>
                     </div>
 
@@ -1149,14 +1165,14 @@ body {
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 <script>
-// ── Buka modal pinjam ──────────────────────────
+// â”€â”€ Buka modal pinjam â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function bukaPinjam(data) {
     // Isi hidden field
     document.getElementById('inputIdBuku').value = data.id;
 
     // Judul & penulis
     document.getElementById('modalJudul').textContent  = data.judul;
-    document.getElementById('modalPenulis').textContent = data.penulis || '—';
+    document.getElementById('modalPenulis').textContent = data.penulis || 'â€”';
 
     // Stok
     const stokEl  = document.getElementById('modalStok');
@@ -1169,7 +1185,7 @@ function bukaPinjam(data) {
     if (data.cover) {
         wrap.innerHTML = `<img src="${data.cover}" alt="${data.judul}" style="width:100%;height:100%;object-fit:cover;">`;
     } else {
-        wrap.innerHTML = `<div class="mini-cover" style="background:linear-gradient(155deg,${data.g1},${data.g2});">${data.judul}</div>`;
+        wrap.innerHTML = `<div class="mini-cover" style="background-color:${data.cSolid || '#1e293b'};">${data.judul}</div>`;
     }
 
     // Reset & hitung sisa hari
@@ -1179,7 +1195,7 @@ function bukaPinjam(data) {
     new bootstrap.Modal(document.getElementById('modalPinjam')).show();
 }
 
-// ── Hitung sisa hari dari tanggal kembali ──────
+// â”€â”€ Hitung sisa hari dari tanggal kembali â”€â”€â”€â”€â”€â”€
 function hitungSisa() {
     const tglInput = document.getElementById('inputTglKembali');
     const infoEl   = document.getElementById('infoSisaHari');
@@ -1204,10 +1220,10 @@ function hitungSisa() {
     }
 }
 
-// ── Init hitung saat halaman load ─────────────
+// â”€â”€ Init hitung saat halaman load â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 document.addEventListener('DOMContentLoaded', hitungSisa);
 
-// ── Sidebar toggle ────────────────────────────
+// â”€â”€ Sidebar toggle â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function toggleSidebar() { document.getElementById('sidebar').classList.toggle('show'); }
 document.addEventListener('click', function(e) {
     const sidebar = document.getElementById('sidebar');
@@ -1218,7 +1234,7 @@ document.addEventListener('click', function(e) {
     }
 });
 
-// ── Auto-close alert ──────────────────────────
+// â”€â”€ Auto-close alert â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 setTimeout(() => {
     const al = document.querySelector('.alert-floating');
     if (al) { al.style.transition='opacity .4s'; al.style.opacity='0'; setTimeout(()=>al.remove(),400); }

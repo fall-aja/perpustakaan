@@ -7,6 +7,8 @@ if (!isset($_SESSION['username']) || $_SESSION['level'] != 'admin') {
 
 $conn = new mysqli("localhost", "root", "", "perpustakaan");
 if ($conn->connect_error) die("Koneksi gagal: " . $conn->connect_error);
+require_once 'helper_katalog.php';
+$menunggu_acc = getJumlahMenunggu($conn);
 
 $id_user  = $_SESSION['id_user'] ?? null;
 $nama     = $_SESSION['nama']     ?? '';
@@ -141,7 +143,8 @@ $fotoPath = (!empty($foto_profil) && file_exists('foto_profil/'.$foto_profil)) ?
 
     body {
         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-        background: #e7e7e7d2;
+        background: #f8fafc;
+        color: #0f172a;
     }
 
     .main-header {
@@ -150,8 +153,8 @@ $fotoPath = (!empty($foto_profil) && file_exists('foto_profil/'.$foto_profil)) ?
         left: 0;
         right: 0;
         height: 60px;
-        background: linear-gradient(135deg, #2d56b6, #4172c1);
-        box-shadow: 0 2px 10px rgba(0, 0, 0, .1);
+        background: #0f172a;
+        border-bottom: 1px solid #1e293b;
         display: flex;
         align-items: center;
         padding: 0 1.5rem;
@@ -162,16 +165,17 @@ $fotoPath = (!empty($foto_profil) && file_exists('foto_profil/'.$foto_profil)) ?
         display: flex;
         align-items: center;
         gap: 12px;
-        color: white;
+        color: #f8fafc;
         text-decoration: none;
-        font-size: 1.25rem;
+        font-size: 1.15rem;
         font-weight: 600;
     }
 
     .brand img {
         width: 32px;
         height: 32px;
-        border-radius: 50%;
+        border-radius: 6px;
+        object-fit: cover;
     }
 
     .search-box {
@@ -182,45 +186,46 @@ $fotoPath = (!empty($foto_profil) && file_exists('foto_profil/'.$foto_profil)) ?
     }
 
     .search-input {
-        background: rgba(255, 255, 255, .15);
-        border: 1px solid rgba(177, 177, 177, .53);
+        background: #1e293b;
+        border: 1px solid #334155;
         border-radius: 8px;
-        padding: .5rem 1rem;
-        color: white;
-        width: 280px;
-        transition: all .3s;
+        padding: .45rem 1rem;
+        color: #f8fafc;
+        width: 260px;
+        font-size: .85rem;
+        transition: border-color .15s;
     }
 
     .search-input::placeholder {
-        color: rgba(230, 230, 230, .7);
+        color: #94a3b8;
     }
 
     .search-input:focus {
-        background: rgba(255, 255, 255, .2);
-        border-color: rgba(255, 255, 255, .3);
+        background: #1e293b;
+        border-color: #2563eb;
         outline: none;
-        width: 320px;
+        width: 280px;
     }
 
     .user-avatar {
         width: 36px;
         height: 36px;
         border-radius: 50%;
-        border: 2px solid rgba(233, 233, 233, .8);
+        border: 2px solid #334155;
         cursor: pointer;
-        transition: transform .2s;
+        transition: opacity .2s;
         object-fit: cover;
     }
 
     .user-avatar:hover {
-        transform: scale(1.05);
+        opacity: .85;
     }
 
     .mobile-toggle {
         display: none;
         background: none;
         border: none;
-        color: white;
+        color: #f8fafc;
         font-size: 1.5rem;
         cursor: pointer;
         margin-right: 1rem;
@@ -238,8 +243,8 @@ $fotoPath = (!empty($foto_profil) && file_exists('foto_profil/'.$foto_profil)) ?
         left: 0;
         bottom: 0;
         width: 260px;
-        background: linear-gradient(180deg, #0f172a, #1e293b);
-        border-right: 1px solid rgba(255, 255, 255, .05);
+        background: #0f172a;
+        border-right: 1px solid #1e293b;
         overflow-y: auto;
         z-index: 900;
         display: flex;
@@ -251,9 +256,9 @@ $fotoPath = (!empty($foto_profil) && file_exists('foto_profil/'.$foto_profil)) ?
     }
 
     .sidebar-title {
-        font-size: .7rem;
+        font-size: .72rem;
         font-weight: 600;
-        color: rgba(255, 255, 255, .4);
+        color: #64748b;
         text-transform: uppercase;
         letter-spacing: .5px;
         padding: 0 1.5rem;
@@ -261,30 +266,30 @@ $fotoPath = (!empty($foto_profil) && file_exists('foto_profil/'.$foto_profil)) ?
     }
 
     .nav-item {
-        margin: .25rem 1rem;
+        margin: .25rem .875rem;
     }
 
     .nav-link {
         display: flex;
         align-items: center;
         gap: .75rem;
-        padding: .75rem 1rem;
-        color: rgba(245, 245, 245, .7);
+        padding: .7rem 1rem;
+        color: #94a3b8;
         text-decoration: none;
         border-radius: 8px;
-        transition: all .2s;
+        transition: background .15s, color .15s;
         font-size: .9rem;
+        font-weight: 500;
     }
 
     .nav-link:hover {
-        background: rgba(255, 255, 255, .05);
-        color: white;
+        background: #1e293b;
+        color: #f8fafc;
     }
 
     .nav-link.active {
-        background: linear-gradient(135deg, #2563eb, #1d4ed8);
-        color: white;
-        box-shadow: 0 4px 12px rgba(37, 99, 235, .3);
+        background: #2563eb;
+        color: #ffffff;
     }
 
     .nav-link i {
@@ -293,22 +298,22 @@ $fotoPath = (!empty($foto_profil) && file_exists('foto_profil/'.$foto_profil)) ?
     }
 
     .nav-logout {
-        color: rgba(248, 248, 248, 0.85) !important;
+        color: #ef4444 !important;
     }
 
     .nav-logout:hover {
-        background:rgba(55, 55, 55, 0.49) !important;
-        color: rgba(37, 99, 235, .3);
+        background: #1e293b !important;
+        color: #f87171 !important;
     }
 
     .sidebar-user {
         margin-top: auto;
         padding: 1.25rem;
-        border-top: 1px solid rgba(255, 255, 255, .1);
+        border-top: 1px solid #1e293b;
         display: flex;
         align-items: center;
         gap: .75rem;
-        background: rgba(0, 0, 0, .2);
+        background: #090d16;
     }
 
     .sb-foto {
@@ -316,7 +321,7 @@ $fotoPath = (!empty($foto_profil) && file_exists('foto_profil/'.$foto_profil)) ?
         height: 40px;
         border-radius: 50%;
         object-fit: cover;
-        border: 2px solid rgba(255, 255, 255, .3);
+        border: 2px solid #334155;
         flex-shrink: 0;
     }
 
@@ -324,46 +329,49 @@ $fotoPath = (!empty($foto_profil) && file_exists('foto_profil/'.$foto_profil)) ?
         width: 40px;
         height: 40px;
         border-radius: 50%;
-        background: linear-gradient(135deg, #2563eb, #3b5fe2);
+        background: #1e293b;
         display: flex;
         align-items: center;
         justify-content: center;
-        color: white;
+        color: #f8fafc;
         font-weight: 700;
         font-size: 1rem;
         flex-shrink: 0;
-        border: 2px solid rgba(255, 255, 255, .3);
+        border: 2px solid #334155;
     }
 
     .sidebar-user-name {
         font-weight: 600;
-        color: white;
+        color: #f8fafc;
         font-size: .9rem;
     }
 
     .sidebar-user-role {
         font-size: .75rem;
-        color: rgba(255, 255, 255, .5);
+        color: #94a3b8;
+        text-transform: capitalize;
     }
 
     .main-content {
         flex: 1;
         margin-left: 260px;
         padding: 2rem;
+        background: #f8fafc;
     }
 
     .page-header {
-        background: white;
+        background: #ffffff;
         border-radius: 12px;
         padding: 1.5rem 2rem;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, .05);
+        border: 1px solid #e2e8f0;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, .03);
         margin-bottom: 1.5rem;
     }
 
     .page-title {
-        font-size: 1.5rem;
+        font-size: 1.4rem;
         font-weight: 700;
-        color: #4879c8;
+        color: #0f172a;
         display: flex;
         align-items: center;
         gap: .75rem;
@@ -375,8 +383,8 @@ $fotoPath = (!empty($foto_profil) && file_exists('foto_profil/'.$foto_profil)) ?
         right: 1.5rem;
         z-index: 9999;
         min-width: 300px;
-        border-radius: 10px;
-        box-shadow: 0 8px 24px rgba(0, 0, 0, .12);
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, .1);
         animation: slideIn .3s ease;
     }
 
@@ -393,10 +401,11 @@ $fotoPath = (!empty($foto_profil) && file_exists('foto_profil/'.$foto_profil)) ?
 
     /* Profile card */
     .profile-card {
-        background: white;
+        background: #ffffff;
         border-radius: 12px;
         padding: 2rem;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, .05);
+        border: 1px solid #e2e8f0;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, .03);
         margin-bottom: 1.5rem;
     }
 
@@ -404,7 +413,7 @@ $fotoPath = (!empty($foto_profil) && file_exists('foto_profil/'.$foto_profil)) ?
         text-align: center;
         margin-bottom: 2rem;
         padding-bottom: 2rem;
-        border-bottom: 2px solid #e2e8f0;
+        border-bottom: 1px solid #e2e8f0;
     }
 
     .avatar-wrap {
@@ -419,8 +428,7 @@ $fotoPath = (!empty($foto_profil) && file_exists('foto_profil/'.$foto_profil)) ?
         height: 120px;
         border-radius: 50%;
         object-fit: cover;
-        border: 4px solid #e2e8f0;
-        box-shadow: 0 4px 16px rgba(0, 0, 0, .12);
+        border: 3px solid #e2e8f0;
         display: block;
     }
 
@@ -428,15 +436,14 @@ $fotoPath = (!empty($foto_profil) && file_exists('foto_profil/'.$foto_profil)) ?
         width: 120px;
         height: 120px;
         border-radius: 50%;
-        background: linear-gradient(135deg, #2563eb, #1d4ed8);
+        background: #1e293b;
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 3rem;
-        color: white;
-        font-weight: bold;
-        border: 4px solid #e2e8f0;
-        box-shadow: 0 4px 16px rgba(0, 0, 0, .12);
+        font-size: 2.75rem;
+        color: #f8fafc;
+        font-weight: 700;
+        border: 3px solid #e2e8f0;
     }
 
     .avatar-cam {
@@ -446,20 +453,19 @@ $fotoPath = (!empty($foto_profil) && file_exists('foto_profil/'.$foto_profil)) ?
         width: 34px;
         height: 34px;
         border-radius: 50%;
-        background: #2563eb;
-        color: white;
-        border: 2.5px solid white;
+        background: #1d4ed8;
+        color: #ffffff;
+        border: 2px solid #ffffff;
         display: flex;
         align-items: center;
         justify-content: center;
         font-size: .85rem;
         cursor: pointer;
-        box-shadow: 0 2px 8px rgba(37, 99, 235, .4);
-        transition: background .18s;
+        transition: background .15s;
     }
 
     .avatar-cam:hover {
-        background: #1d4ed8;
+        background: #1e40af;
     }
 
     /* Upload area */
@@ -469,11 +475,11 @@ $fotoPath = (!empty($foto_profil) && file_exists('foto_profil/'.$foto_profil)) ?
     }
 
     .upload-area {
-        border: 2px dashed #cbd5e1;
-        border-radius: 10px;
-        padding: 1rem;
+        border: 1.5px dashed #cbd5e1;
+        border-radius: 8px;
+        padding: 1.25rem 1rem;
         cursor: pointer;
-        transition: all .2s;
+        transition: border-color .15s, background .15s;
         position: relative;
         background: #f8fafc;
         text-align: center;
@@ -496,8 +502,8 @@ $fotoPath = (!empty($foto_profil) && file_exists('foto_profil/'.$foto_profil)) ?
 
     .ua-icon {
         font-size: 1.4rem;
-        color: #94a3b8;
-        transition: color .2s;
+        color: #64748b;
+        transition: color .15s;
     }
 
     .upload-area:hover .ua-icon {
@@ -505,14 +511,14 @@ $fotoPath = (!empty($foto_profil) && file_exists('foto_profil/'.$foto_profil)) ?
     }
 
     .ua-text {
-        font-size: .75rem;
-        color: #64748b;
-        font-weight: 500;
+        font-size: .78rem;
+        color: #334155;
+        font-weight: 600;
         margin-top: .25rem;
     }
 
     .ua-hint {
-        font-size: .68rem;
+        font-size: .7rem;
         color: #94a3b8;
     }
 
@@ -536,7 +542,7 @@ $fotoPath = (!empty($foto_profil) && file_exists('foto_profil/'.$foto_profil)) ?
         width: 24px;
         height: 24px;
         border-radius: 50%;
-        background: rgba(0, 0, 0, .55);
+        background: #0f172a;
         color: white;
         border: none;
         cursor: pointer;
@@ -547,14 +553,14 @@ $fotoPath = (!empty($foto_profil) && file_exists('foto_profil/'.$foto_profil)) ?
     }
 
     .pv-remove:hover {
-        background: #ef4444;
+        background: #dc2626;
     }
 
     .btn-save-foto {
         width: 100%;
         margin-top: .6rem;
-        padding: .48rem;
-        background: linear-gradient(135deg, #2563eb, #1d4ed8);
+        padding: .5rem;
+        background: #1d4ed8;
         color: white;
         border: none;
         border-radius: 8px;
@@ -565,36 +571,36 @@ $fotoPath = (!empty($foto_profil) && file_exists('foto_profil/'.$foto_profil)) ?
         align-items: center;
         justify-content: center;
         gap: .4rem;
-        transition: opacity .18s;
+        transition: background .15s;
     }
 
     .btn-save-foto:hover {
-        opacity: .9;
+        background: #1e40af;
     }
 
     .btn-hapus-foto {
         width: 100%;
         margin-top: .45rem;
-        padding: .42rem;
-        background: rgba(239, 68, 68, .1);
-        color: #dc2626;
-        border: 1.5px solid rgba(239, 68, 68, .2);
+        padding: .45rem;
+        background: #fee2e2;
+        color: #b91c1c;
+        border: 1px solid #fecaca;
         border-radius: 8px;
         font-size: .78rem;
-        font-weight: 500;
+        font-weight: 600;
         cursor: pointer;
         display: flex;
         align-items: center;
         justify-content: center;
         gap: .4rem;
-        transition: all .18s;
+        transition: background .15s, border-color .15s;
         text-decoration: none;
     }
 
     .btn-hapus-foto:hover {
-        background: #ef4444;
+        background: #dc2626;
         color: white;
-        border-color: #ef4444;
+        border-color: #dc2626;
     }
 
     /* Info */
@@ -608,37 +614,40 @@ $fotoPath = (!empty($foto_profil) && file_exists('foto_profil/'.$foto_profil)) ?
         padding: 1.1rem 1.25rem;
         background: #f8fafc;
         border-radius: 8px;
-        border-left: 4px solid #2563eb;
+        border: 1px solid #e2e8f0;
+        border-left: 4px solid #1d4ed8;
     }
 
     .info-label {
-        font-size: .82rem;
+        font-size: .8rem;
         color: #64748b;
         margin-bottom: .4rem;
         display: flex;
         align-items: center;
         gap: .4rem;
+        font-weight: 500;
     }
 
     .info-value {
         font-size: 1.05rem;
-        font-weight: 600;
-        color: #1e293b;
+        font-weight: 700;
+        color: #0f172a;
     }
 
     /* Edit username */
     .edit-card {
-        background: white;
+        background: #ffffff;
         border-radius: 12px;
         padding: 1.75rem 2rem;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, .05);
+        border: 1px solid #e2e8f0;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, .03);
         margin-bottom: 1.5rem;
     }
 
     .edit-card-title {
         font-size: 1rem;
         font-weight: 700;
-        color: #1e293b;
+        color: #0f172a;
         display: flex;
         align-items: center;
         gap: .5rem;
@@ -648,9 +657,9 @@ $fotoPath = (!empty($foto_profil) && file_exists('foto_profil/'.$foto_profil)) ?
     }
 
     .form-label {
-        font-size: .78rem;
+        font-size: .8rem;
         font-weight: 600;
-        color: #374151;
+        color: #334155;
         margin-bottom: .3rem;
         display: flex;
         align-items: center;
@@ -662,23 +671,25 @@ $fotoPath = (!empty($foto_profil) && file_exists('foto_profil/'.$foto_profil)) ?
     }
 
     .form-control {
-        border: 1.5px solid #e2e8f0;
+        border: 1px solid #cbd5e1;
         border-radius: 8px;
         font-size: .875rem;
         padding: .5rem .85rem;
-        color: #1e293b;
-        transition: border-color .18s, box-shadow .18s;
+        color: #0f172a;
+        background: #f8fafc;
+        transition: border-color .15s, background .15s;
     }
 
     .form-control:focus {
         border-color: #2563eb;
-        box-shadow: 0 0 0 3px rgba(37, 99, 235, .1);
+        background: #ffffff;
+        box-shadow: none;
         outline: none;
     }
 
     .btn-save {
         padding: .55rem 1.4rem;
-        background: linear-gradient(135deg, #2563eb, #1d4ed8);
+        background: #1d4ed8;
         color: white;
         border: none;
         border-radius: 8px;
@@ -688,26 +699,26 @@ $fotoPath = (!empty($foto_profil) && file_exists('foto_profil/'.$foto_profil)) ?
         display: inline-flex;
         align-items: center;
         gap: .4rem;
-        transition: all .2s;
+        transition: background .15s;
     }
 
     .btn-save:hover {
-        opacity: .9;
-        transform: translateY(-1px);
+        background: #1e40af;
     }
 
     /* Activity */
     .activity-section {
-        background: white;
+        background: #ffffff;
         border-radius: 12px;
         padding: 2rem;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, .05);
+        border: 1px solid #e2e8f0;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, .03);
     }
 
     .activity-title {
         font-size: 1.1rem;
         font-weight: 700;
-        color: #1e293b;
+        color: #0f172a;
         margin-bottom: 1.25rem;
         display: flex;
         align-items: center;
@@ -719,13 +730,13 @@ $fotoPath = (!empty($foto_profil) && file_exists('foto_profil/'.$foto_profil)) ?
     }
 
     .activity-item {
-        padding: .85rem .5rem;
+        padding: .85rem .75rem;
         border-bottom: 1px solid #f1f5f9;
         display: flex;
         align-items: center;
         gap: .85rem;
-        border-radius: 6px;
-        transition: background .2s;
+        border-radius: 8px;
+        transition: background .15s;
     }
 
     .activity-item:hover {
@@ -748,28 +759,32 @@ $fotoPath = (!empty($foto_profil) && file_exists('foto_profil/'.$foto_profil)) ?
     }
 
     .act-blue {
-        background: rgba(37, 99, 235, .1);
-        color: #2563eb;
+        background: #eff6ff;
+        color: #1d4ed8;
+        border: 1px solid #bfdbfe;
     }
 
     .act-green {
-        background: rgba(16, 185, 129, .1);
-        color: #059669;
+        background: #dcfce7;
+        color: #15803d;
+        border: 1px solid #bbf7d0;
     }
 
     .act-orange {
-        background: rgba(245, 158, 11, .1);
-        color: #d97706;
+        background: #fef3c7;
+        color: #b45309;
+        border: 1px solid #fde68a;
     }
 
     .act-purple {
-        background: rgba(139, 92, 246, .1);
-        color: #7c3aed;
+        background: #f1f5f9;
+        color: #475569;
+        border: 1px solid #e2e8f0;
     }
 
     .activity-text {
         font-weight: 600;
-        color: #1e293b;
+        color: #0f172a;
         font-size: .88rem;
         margin-bottom: .2rem;
     }
@@ -804,18 +819,19 @@ $fotoPath = (!empty($foto_profil) && file_exists('foto_profil/'.$foto_profil)) ?
         }
     }
 </style>
+    <link rel="stylesheet" href="katalog_styles.css">
 </head>
 <body>
 <header class="main-header">
     <button class="mobile-toggle" onclick="toggleSidebar()"><i class="bi bi-list"></i></button>
-    <a href="beranda.php" class="brand"><img src="logo 40.jpeg" alt="Logo"><span>PerpusOnline</span></a>
+    <a href="beranda.php" class="brand"><img src="logo 40.jpeg" alt="Logo"><span><?= NAMA_PERPUS ?></span></a>
     <div class="search-box">
-        <input type="text" class="search-input" placeholder="Cari buku...">
         <img src="logo 40.jpeg" alt="User" class="user-avatar" data-bs-toggle="dropdown">
         <ul class="dropdown-menu dropdown-menu-dark dropdown-menu-end">
             <li><a class="dropdown-item" href="profile_admin.php"><i class="bi bi-person me-2"></i>Profil</a></li>
+            <li><a class="dropdown-item" href="index.php"><i class="bi bi-globe me-2"></i>Katalog Publik</a></li>
             <li><hr class="dropdown-divider"></li>
-            <li><a class="dropdown-item" href="logout.php"><i class="bi bi-box-arrow-right me-2"></i>Keluar</a></li>
+            <li><a class="dropdown-item text-danger" href="logout.php"><i class="bi bi-box-arrow-right me-2"></i>Keluar</a></li>
         </ul>
     </div>
 </header>
@@ -828,13 +844,23 @@ $fotoPath = (!empty($foto_profil) && file_exists('foto_profil/'.$foto_profil)) ?
         <div class="nav-item"><a href="anggota.php" class="nav-link"><i class="bi bi-people"></i><span>Anggota</span></a></div>
         <div class="nav-item"><a href="peminjaman.php" class="nav-link"><i class="bi bi-clock-history"></i><span>Peminjaman</span></a></div>
         <div class="nav-item"><a href="pengembalian.php" class="nav-link"><i class="bi bi-arrow-return-left"></i><span>Pengembalian</span></a></div>
-        <div class="nav-item"><a href="persetujuan_admin.php" class="nav-link"><i class="bi bi-check2-square"></i><span>Persetujuan</span></a></div>
+        <div class="nav-item">
+            <a href="persetujuan_admin.php" class="nav-link d-flex align-items-center justify-content-between">
+                <div class="d-flex align-items-center gap-2">
+                    <i class="bi bi-check2-square"></i><span>Persetujuan</span>
+                </div>
+                <?php if (!empty($menunggu_acc) && $menunggu_acc > 0): ?>
+                    <span class="badge-notif-sidebar"><?= $menunggu_acc ?></span>
+                <?php endif; ?>
+            </a>
+        </div>
     </div>
     <div class="sidebar-section">
         <div class="sidebar-title">Lainnya</div>
         <div class="nav-item"><a href="profile_admin.php" class="nav-link active"><i class="bi bi-person-circle"></i><span>Profile Admin</span></a></div>
-            <div class="nav-item"><a href="tambah_kategori.php" class="nav-link"><i class="bi bi-tags-fill"></i><span>Kategori</span></a></div>
-        <div class="nav-item"><a href="logout.php" class="nav-link nav-logout"><i class="bi bi-box-arrow-left"></i><span>Keluar</span></a></div>
+        <div class="nav-item"><a href="tambah_kategori.php" class="nav-link"><i class="bi bi-tags-fill"></i><span>Kategori</span></a></div>
+        <div class="nav-item"><a href="index.php" class="nav-link"><i class="bi bi-globe"></i><span>Katalog Publik</span></a></div>
+        <div class="nav-item"><a href="logout.php" class="nav-link text-danger"><i class="bi bi-box-arrow-left"></i><span>Keluar</span></a></div>
     </div>
     <div class="sidebar-user">
         <?php if ($fotoPath): ?>

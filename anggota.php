@@ -9,6 +9,8 @@ $conn = new mysqli("localhost", "root", "", "perpustakaan");
 if ($conn->connect_error) {
     die("Koneksi gagal: " . $conn->connect_error);
 }
+require_once 'helper_katalog.php';
+$menunggu_acc = getJumlahMenunggu($conn);
 
 // ==================== PROSES HAPUS ====================
 if (isset($_GET['hapus'])) {
@@ -28,6 +30,7 @@ if (isset($_GET['hapus'])) {
 // ==================== PROSES TAMBAH ANGGOTA ====================
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['aksi']) && $_POST['aksi'] === 'tambah') {
     $nama     = $conn->real_escape_string(trim($_POST['nama']));
+    $nis      = $conn->real_escape_string(trim($_POST['nis'] ?? ''));
     $username = $conn->real_escape_string(trim($_POST['username']));
     $password = $conn->real_escape_string(trim($_POST['password']));
     $email    = $conn->real_escape_string(trim($_POST['email']));
@@ -40,8 +43,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['aksi']) && $_POST['ak
     if ($cekUser && $cekUser->num_rows > 0) {
         header("Location: anggota.php?pesan=username_duplikat");
     } else {
-        $conn->query("INSERT INTO user (nama, username, password, email, alamat, no_hp, level)
-                      VALUES ('$nama','$username','$password','$email','$alamat','$no_hp','$level')");
+        $conn->query("INSERT INTO user (nama, nis, username, password, email, alamat, no_hp, level)
+                      VALUES ('$nama','$nis','$username','$password','$email','$alamat','$no_hp','$level')");
         header("Location: anggota.php?pesan=tambah_sukses");
     }
     exit();
@@ -51,6 +54,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['aksi']) && $_POST['ak
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['aksi']) && $_POST['aksi'] === 'edit') {
     $id       = intval($_POST['id_user']);
     $nama     = $conn->real_escape_string(trim($_POST['nama']));
+    $nis      = $conn->real_escape_string(trim($_POST['nis'] ?? ''));
     $username = $conn->real_escape_string(trim($_POST['username']));
     $email    = $conn->real_escape_string(trim($_POST['email']));
     $alamat   = $conn->real_escape_string(trim($_POST['alamat']));
@@ -59,9 +63,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['aksi']) && $_POST['ak
     // Update password hanya jika diisi
     if (!empty(trim($_POST['password']))) {
         $password = $conn->real_escape_string(trim($_POST['password']));
-        $conn->query("UPDATE user SET nama='$nama', username='$username', password='$password', email='$email', alamat='$alamat', no_hp='$no_hp' WHERE id_user=$id");
+        $conn->query("UPDATE user SET nama='$nama', nis='$nis', username='$username', password='$password', email='$email', alamat='$alamat', no_hp='$no_hp' WHERE id_user=$id");
     } else {
-        $conn->query("UPDATE user SET nama='$nama', username='$username', email='$email', alamat='$alamat', no_hp='$no_hp' WHERE id_user=$id");
+        $conn->query("UPDATE user SET nama='$nama', nis='$nis', username='$username', email='$email', alamat='$alamat', no_hp='$no_hp' WHERE id_user=$id");
     }
     header("Location: anggota.php?pesan=edit_sukses");
     exit();
@@ -73,7 +77,7 @@ $level_filter = isset($_GET['level']) ? $conn->real_escape_string($_GET['level']
 
 $where = "WHERE 1=1";
 if ($search) {
-    $where .= " AND (nama LIKE '%$search%' OR username LIKE '%$search%' OR email LIKE '%$search%')";
+    $where .= " AND (nama LIKE '%$search%' OR username LIKE '%$search%' OR email LIKE '%$search%' OR nis LIKE '%$search%')";
 }
 if ($level_filter) {
     $where .= " AND level = '$level_filter'";
@@ -94,9 +98,10 @@ $total_aktif   = $conn->query("SELECT COUNT(DISTINCT id_user) AS c FROM peminjam
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Anggota - PerpusOnline</title>
+    <title>Data Anggota | <?= NAMA_PERPUS ?></title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="katalog_styles.css">
     <style>
 
         /* =============================================
@@ -111,19 +116,21 @@ $total_aktif   = $conn->query("SELECT COUNT(DISTINCT id_user) AS c FROM peminjam
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
                          'Helvetica Neue', Arial, sans-serif;
-            background: #e7e7e7d2;
+            background: #f8fafc;
+            color: #0f172a;
         }
 
 
         /* =============================================
-           HEADER
+           HEADER - Solid Slate
         ============================================= */
         .main-header {
             position: fixed;
             top: 0; left: 0; right: 0;
             height: 60px;
-            background: linear-gradient(135deg, #2d56b6 0%, #4172c1 100%);
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            background: #0f172a;
+            border-bottom: 1px solid #1e293b;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
             display: flex;
             align-items: center;
             padding: 0 1.5rem;
@@ -134,16 +141,18 @@ $total_aktif   = $conn->query("SELECT COUNT(DISTINCT id_user) AS c FROM peminjam
             display: flex;
             align-items: center;
             gap: 12px;
-            color: white;
+            color: #f8fafc;
             text-decoration: none;
-            font-size: 1.25rem;
-            font-weight: 600;
+            font-size: 1.15rem;
+            font-weight: 700;
+            letter-spacing: 0.2px;
         }
 
         .brand img {
             width: 32px;
             height: 32px;
             border-radius: 50%;
+            border: 1px solid #334155;
         }
 
         .search-box {
@@ -154,34 +163,36 @@ $total_aktif   = $conn->query("SELECT COUNT(DISTINCT id_user) AS c FROM peminjam
         }
 
         .search-input {
-            background: rgba(255, 255, 255, 0.15);
-            border: 1px solid rgba(177, 177, 177, 0.53);
+            background: #1e293b;
+            border: 1px solid #334155;
             border-radius: 8px;
-            padding: 0.5rem 1rem;
-            color: white;
-            width: 280px;
-            transition: all 0.3s;
+            padding: 0.45rem 1rem;
+            color: #f8fafc;
+            width: 260px;
+            font-size: 0.88rem;
+            transition: all 0.2s;
+            outline: none;
         }
 
-        .search-input::placeholder { color: rgba(230, 230, 230, 0.7); }
+        .search-input::placeholder { color: #94a3b8; }
 
         .search-input:focus {
-            background: rgba(255, 255, 255, 0.2);
-            border-color: rgba(255, 255, 255, 0.3);
-            outline: none;
-            width: 320px;
+            background: #0f172a;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+            width: 300px;
         }
 
         .user-avatar {
             width: 36px;
             height: 36px;
             border-radius: 50%;
-            border: 2px solid rgba(233, 233, 233, 0.8);
+            border: 2px solid #334155;
             cursor: pointer;
-            transition: transform 0.2s;
+            transition: border-color 0.2s;
         }
 
-        .user-avatar:hover { transform: scale(1.05); }
+        .user-avatar:hover { border-color: #60a5fa; }
 
 
         /* =============================================
@@ -195,55 +206,57 @@ $total_aktif   = $conn->query("SELECT COUNT(DISTINCT id_user) AS c FROM peminjam
 
 
         /* =============================================
-           SIDEBAR
+           SIDEBAR - Solid Slate
         ============================================= */
         .sidebar {
             position: fixed;
             top: 60px; left: 0; bottom: 0;
             width: 260px;
-            background: linear-gradient(180deg, #0f172a 0%, #1e293b 100%);
-            border-right: 1px solid rgba(255, 255, 255, 0.05);
+            background: #0f172a;
+            border-right: 1px solid #1e293b;
             overflow-y: auto;
             z-index: 900;
             display: flex;
             flex-direction: column;
         }
 
-        .sidebar-section { padding: 1.5rem 0; }
+        .sidebar-section { padding: 1.25rem 0; }
 
         .sidebar-title {
-            font-size: 0.7rem;
-            font-weight: 600;
-            color: rgba(255, 255, 255, 0.4);
+            font-size: 0.72rem;
+            font-weight: 700;
+            color: #64748b;
             text-transform: uppercase;
-            letter-spacing: 0.5px;
+            letter-spacing: 0.6px;
             padding: 0 1.5rem;
-            margin-bottom: 0.75rem;
+            margin-bottom: 0.65rem;
         }
 
-        .nav-item { margin: 0.25rem 1rem; }
+        .nav-item { margin: 0.2rem 0.85rem; }
 
         .nav-link {
             display: flex;
             align-items: center;
             gap: 0.75rem;
-            padding: 0.75rem 1rem;
-            color: rgba(245, 245, 245, 0.7);
+            padding: 0.65rem 0.95rem;
+            color: #94a3b8;
             text-decoration: none;
             border-radius: 8px;
-            transition: all 0.2s;
-            font-size: 0.9rem;
+            transition: background-color 0.15s, color 0.15s;
+            font-size: 0.88rem;
+            font-weight: 500;
         }
 
         .nav-link:hover {
-            background: rgba(255, 255, 255, 0.05);
+            background: #1e293b;
             color: white;
         }
 
         .nav-link.active {
-            background: linear-gradient(135deg, #2563eb, #1d4ed8);
+            background: #2563eb;
             color: white;
-            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+            font-weight: 600;
+            box-shadow: none;
         }
 
         .nav-link i {
@@ -253,30 +266,32 @@ $total_aktif   = $conn->query("SELECT COUNT(DISTINCT id_user) AS c FROM peminjam
 
         .sidebar-user {
             margin-top: auto;
-            padding: 1.25rem;
-            border-top: 1px solid rgba(255, 255, 255, 0.7);
+            padding: 1.1rem 1.25rem;
+            border-top: 1px solid #1e293b;
             display: flex;
             align-items: center;
             gap: 0.75rem;
-            background: rgba(0, 0, 0, 0.2);
+            background: #0b1120;
         }
 
         .sidebar-user img {
-            width: 40px;
-            height: 40px;
+            width: 38px;
+            height: 38px;
             border-radius: 50%;
-            border: 2px solid rgba(227, 227, 227, 0.8);
+            border: 2px solid #334155;
+            object-fit: cover;
         }
 
         .sidebar-user-name {
             font-weight: 600;
-            color: white;
-            font-size: 0.9rem;
+            color: #f8fafc;
+            font-size: 0.88rem;
         }
 
         .sidebar-user-role {
             font-size: 0.75rem;
-            color: rgba(255, 255, 255, 0.5);
+            color: #64748b;
+            text-transform: capitalize;
         }
 
 
@@ -286,7 +301,7 @@ $total_aktif   = $conn->query("SELECT COUNT(DISTINCT id_user) AS c FROM peminjam
         .main-content {
             flex: 1;
             margin-left: 260px;
-            padding: 2rem;
+            padding: 2rem 2.25rem;
         }
 
 
@@ -294,10 +309,11 @@ $total_aktif   = $conn->query("SELECT COUNT(DISTINCT id_user) AS c FROM peminjam
            PAGE HEADER
         ============================================= */
         .page-header {
-            background: white;
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
             border-radius: 12px;
-            padding: 1.5rem 2rem;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+            padding: 1.25rem 1.75rem;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
             margin-bottom: 1.5rem;
             display: flex;
             align-items: center;
@@ -305,34 +321,34 @@ $total_aktif   = $conn->query("SELECT COUNT(DISTINCT id_user) AS c FROM peminjam
         }
 
         .page-title {
-            font-size: 1.5rem;
+            font-size: 1.35rem;
             font-weight: 700;
-            color: #4879c8;
+            color: #0f172a;
             display: flex;
             align-items: center;
-            gap: 0.75rem;
+            gap: 0.65rem;
         }
 
         .btn-primary-custom {
-            background: linear-gradient(135deg, #2563eb, #1d4ed8);
+            background: #1d4ed8;
             color: white;
-            border: none;
+            border: 1px solid #1d4ed8;
             border-radius: 8px;
-            padding: 0.6rem 1.25rem;
+            padding: 0.55rem 1.2rem;
             font-weight: 600;
             text-decoration: none;
             display: inline-flex;
             align-items: center;
             gap: 0.5rem;
-            transition: all 0.2s;
-            font-size: 0.9rem;
+            transition: background-color 0.15s ease;
+            font-size: 0.88rem;
             cursor: pointer;
         }
 
         .btn-primary-custom:hover {
-            opacity: 0.9;
+            background: #1e40af;
+            border-color: #1e40af;
             color: white;
-            transform: translateY(-1px);
         }
 
 
@@ -342,49 +358,54 @@ $total_aktif   = $conn->query("SELECT COUNT(DISTINCT id_user) AS c FROM peminjam
         .stats-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 1rem;
+            gap: 1.25rem;
             margin-bottom: 1.5rem;
         }
 
         .stat-card {
-            background: white;
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
             border-radius: 12px;
-            padding: 1.25rem 1.5rem;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+            padding: 1.25rem 1.4rem;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
             display: flex;
             align-items: center;
             gap: 1rem;
-            transition: transform 0.2s;
+            transition: transform 0.15s ease, border-color 0.15s ease;
         }
 
-        .stat-card:hover { transform: translateY(-3px); }
+        .stat-card:hover { transform: translateY(-2px); border-color: #cbd5e1; }
 
         .stat-icon {
-            width: 48px;
-            height: 48px;
+            width: 44px;
+            height: 44px;
             border-radius: 10px;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 1.4rem;
+            font-size: 1.35rem;
             flex-shrink: 0;
         }
 
-        .stat-icon.blue   { background: rgba(37,  99, 235, 0.1); color: #2563eb; }
-        .stat-icon.purple { background: rgba(139, 92, 246, 0.1); color: #7c3aed; }
-        .stat-icon.orange { background: rgba(245,158,  11, 0.1); color: #f59e0b; }
-        .stat-icon.green  { background: rgba( 16,185, 129, 0.1); color: #10b981; }
+        .stat-icon.blue   { background: #eff6ff; color: #1d4ed8; border: 1px solid #dbeafe; }
+        .stat-icon.purple { background: #f0fdfa; color: #0f766e; border: 1px solid #ccfbf1; }
+        .stat-icon.orange { background: #fffbeb; color: #b45309; border: 1px solid #fef3c7; }
+        .stat-icon.green  { background: #f0fdf4; color: #15803d; border: 1px solid #dcfce7; }
 
         .stat-label {
             font-size: 0.8rem;
             color: #64748b;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.4px;
             margin-bottom: 0.2rem;
         }
 
         .stat-value {
             font-size: 1.75rem;
-            font-weight: 700;
-            color: #1e293b;
+            font-weight: 800;
+            color: #0f172a;
+            line-height: 1.1;
         }
 
 
@@ -392,76 +413,80 @@ $total_aktif   = $conn->query("SELECT COUNT(DISTINCT id_user) AS c FROM peminjam
            FILTER BAR
         ============================================= */
         .filter-bar {
-            background: white;
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
             border-radius: 12px;
-            padding: 1rem 1.5rem;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+            padding: 0.9rem 1.35rem;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
             margin-bottom: 1.5rem;
             display: flex;
             align-items: center;
-            gap: 0.75rem;
+            gap: 0.5rem;
             flex-wrap: wrap;
         }
 
         .filter-btn {
-            padding: 0.4rem 1rem;
-            border-radius: 20px;
+            padding: 0.35rem 0.85rem;
+            border-radius: 6px;
             text-decoration: none;
-            font-size: 0.85rem;
+            font-size: 0.82rem;
             font-weight: 500;
-            border: 1.5px solid #e2e8f0;
-            color: #64748b;
-            transition: all 0.2s;
-            background: transparent;
+            border: 1px solid #cbd5e1;
+            color: #334155;
+            transition: all 0.15s ease;
+            background: #ffffff;
             display: inline-flex;
             align-items: center;
             gap: 0.3rem;
         }
 
-        .filter-btn:hover { background: #f1f5f9; color: #1e293b; }
+        .filter-btn:hover { background: #eff6ff; border-color: #1d4ed8; color: #1d4ed8; }
 
-        .filter-btn.active        { background: #2563eb; border-color: #2563eb; color: white; }
-        .filter-btn.active.purple { background: #7c3aed; border-color: #7c3aed; color: white; }
-        .filter-btn.active.orange { background: #f59e0b; border-color: #f59e0b; color: white; }
+        .filter-btn.active        { background: #1d4ed8; border-color: #1d4ed8; color: white; font-weight: 600; }
+        .filter-btn.active.purple { background: #0f766e; border-color: #0f766e; color: white; font-weight: 600; }
+        .filter-btn.active.orange { background: #b45309; border-color: #b45309; color: white; font-weight: 600; }
 
         .search-filter {
             margin-left: auto;
             display: flex;
             align-items: center;
-            gap: 0.5rem;
+            gap: 0.4rem;
         }
 
         .search-filter input {
-            border: 1.5px solid #e2e8f0;
-            border-radius: 8px;
-            padding: 0.4rem 1rem;
-            font-size: 0.85rem;
-            color: #1e293b;
-            width: 220px;
-            outline: none;
-            transition: border-color 0.2s;
-        }
-
-        .search-filter input:focus { border-color: #2563eb; }
-
-        .search-filter button {
-            background: #2563eb;
-            color: white;
-            border: none;
+            border: 1px solid #cbd5e1;
             border-radius: 8px;
             padding: 0.4rem 0.85rem;
-            font-size: 0.9rem;
-            cursor: pointer;
+            font-size: 0.85rem;
+            color: #0f172a;
+            width: 210px;
+            outline: none;
+            transition: border-color 0.15s, box-shadow 0.15s;
         }
+
+        .search-filter input:focus { border-color: #1d4ed8; box-shadow: 0 0 0 3px rgba(29, 78, 216, 0.12); }
+
+        .search-filter button {
+            background: #1d4ed8;
+            color: white;
+            border: 1px solid #1d4ed8;
+            border-radius: 8px;
+            padding: 0.4rem 0.85rem;
+            font-size: 0.88rem;
+            cursor: pointer;
+            transition: background-color 0.15s;
+        }
+        .search-filter button:hover { background: #1e40af; }
 
 
         /* =============================================
            TABEL
         ============================================= */
         .table-card {
-            background: white;
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
             border-radius: 12px;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
             overflow: hidden;
         }
 
@@ -475,14 +500,14 @@ $total_aktif   = $conn->query("SELECT COUNT(DISTINCT id_user) AS c FROM peminjam
         thead tr { background: #f8fafc; }
 
         th {
-            padding: 0.9rem 1rem;
+            padding: 0.85rem 1rem;
             text-align: left;
-            font-size: 0.78rem;
+            font-size: 0.75rem;
             font-weight: 700;
-            color: #64748b;
+            color: #475569;
             text-transform: uppercase;
             letter-spacing: 0.4px;
-            border-bottom: 2px solid #e2e8f0;
+            border-bottom: 1px solid #e2e8f0;
             white-space: nowrap;
         }
 
@@ -502,21 +527,21 @@ $total_aktif   = $conn->query("SELECT COUNT(DISTINCT id_user) AS c FROM peminjam
            BADGE & AVATAR
         ============================================= */
         .badge-level {
-            padding: 0.3rem 0.75rem;
-            border-radius: 20px;
+            padding: 0.25rem 0.65rem;
+            border-radius: 6px;
             font-size: 0.75rem;
             font-weight: 600;
             display: inline-block;
         }
 
-        .badge-admin   { background: rgba( 37, 99, 235, 0.12); color: #1d4ed8; }
-        .badge-anggota { background: rgba( 16,185, 129, 0.12); color: #059669; }
+        .badge-admin   { background: #eff6ff; color: #1d4ed8; border: 1px solid #dbeafe; }
+        .badge-anggota { background: #f0fdf4; color: #15803d; border: 1px solid #dcfce7; }
 
         .avatar-circle {
-            width: 36px;
-            height: 36px;
+            width: 34px;
+            height: 34px;
             border-radius: 50%;
-            background: linear-gradient(135deg, #2563eb, #7c3aed);
+            background: #1e293b;
             color: white;
             display: inline-flex;
             align-items: center;
@@ -524,6 +549,7 @@ $total_aktif   = $conn->query("SELECT COUNT(DISTINCT id_user) AS c FROM peminjam
             font-weight: 700;
             font-size: 0.85rem;
             flex-shrink: 0;
+            border: 1px solid #334155;
         }
 
 
@@ -539,16 +565,16 @@ $total_aktif   = $conn->query("SELECT COUNT(DISTINCT id_user) AS c FROM peminjam
             display: inline-flex;
             align-items: center;
             gap: 0.3rem;
-            border: none;
+            border: 1px solid transparent;
             cursor: pointer;
-            transition: all 0.2s;
+            transition: all 0.15s ease;
         }
 
-        .btn-edit               { background: rgba( 37, 99, 235, 0.1); color: #2563eb; }
-        .btn-edit:hover         { background: #2563eb; color: white; }
+        .btn-edit               { background: #eff6ff; color: #1d4ed8; border-color: #dbeafe; }
+        .btn-edit:hover         { background: #1d4ed8; color: white; }
 
-        .btn-hapus              { background: rgba(239, 68,  68, 0.1); color: #dc2626; }
-        .btn-hapus:hover        { background: #ef4444; color: white; }
+        .btn-hapus              { background: #fef2f2; color: #b91c1c; border-color: #fee2e2; }
+        .btn-hapus:hover        { background: #dc2626; color: white; }
 
 
         /* =============================================
@@ -561,9 +587,10 @@ $total_aktif   = $conn->query("SELECT COUNT(DISTINCT id_user) AS c FROM peminjam
         }
 
         .empty-state i {
-            font-size: 3rem;
-            margin-bottom: 1rem;
+            font-size: 2.8rem;
+            margin-bottom: 0.75rem;
             display: block;
+            color: #cbd5e1;
         }
 
 
@@ -571,45 +598,47 @@ $total_aktif   = $conn->query("SELECT COUNT(DISTINCT id_user) AS c FROM peminjam
            MODAL
         ============================================= */
         .modal-content {
-            border: none;
-            border-radius: 16px;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
         }
 
         .modal-header {
-            background: linear-gradient(135deg, #2563eb, #1d4ed8);
+            background: #0f172a;
             color: white;
-            border-radius: 16px 16px 0 0;
-            padding: 1.25rem 1.5rem;
+            border-bottom: 1px solid #1e293b;
+            padding: 1.1rem 1.5rem;
         }
 
         .modal-header .btn-close { filter: invert(1); }
 
-        .modal-body  { padding: 1.5rem; }
+        .modal-body  { padding: 1.5rem; background: #ffffff; }
 
         .modal-footer {
-            padding: 1rem 1.5rem;
+            padding: 0.9rem 1.5rem;
             border-top: 1px solid #e2e8f0;
+            background: #f8fafc;
         }
 
         .form-label {
             font-weight: 600;
             font-size: 0.85rem;
-            color: #374151;
+            color: #1e293b;
         }
 
         .form-control,
         .form-select {
-            border: 1.5px solid #e2e8f0;
-            border-radius: 8px;
-            padding: 0.55rem 0.85rem;
-            font-size: 0.9rem;
-            transition: border-color 0.2s;
+            border: 1px solid #cbd5e1;
+            border-radius: 6px;
+            padding: 0.5rem 0.85rem;
+            font-size: 0.88rem;
+            transition: border-color 0.15s;
         }
 
         .form-control:focus,
         .form-select:focus {
-            border-color: #2563eb;
-            box-shadow: none;
+            border-color: #1d4ed8;
+            box-shadow: 0 0 0 3px rgba(29, 78, 216, 0.12);
         }
 
 
@@ -622,9 +651,10 @@ $total_aktif   = $conn->query("SELECT COUNT(DISTINCT id_user) AS c FROM peminjam
             right: 1.5rem;
             z-index: 9999;
             min-width: 280px;
-            border-radius: 10px;
-            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
-            animation: slideIn 0.3s ease;
+            border-radius: 8px;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+            animation: slideIn 0.25s ease;
         }
 
         @keyframes slideIn {
@@ -640,8 +670,8 @@ $total_aktif   = $conn->query("SELECT COUNT(DISTINCT id_user) AS c FROM peminjam
             display: none;
             background: none;
             border: none;
-            color: white;
-            font-size: 1.5rem;
+            color: #f8fafc;
+            font-size: 1.4rem;
             cursor: pointer;
             margin-right: 1rem;
         }
@@ -683,13 +713,14 @@ $total_aktif   = $conn->query("SELECT COUNT(DISTINCT id_user) AS c FROM peminjam
 <header class="main-header">
     <button class="mobile-toggle" onclick="toggleSidebar()"><i class="bi bi-list"></i></button>
     <a href="beranda.php" class="brand">
-        <img src="logo 40.jpeg" alt="Logo"><span>PerpusOnline</span>
+        <img src="logo 40.jpeg" alt="Logo"><span><?= NAMA_PERPUS ?></span>
     </a>
     <div class="search-box">
         <div class="dropdown">
             <img src="logo 40.jpeg" alt="User" class="user-avatar" data-bs-toggle="dropdown">
             <ul class="dropdown-menu dropdown-menu-end">
                 <li><a class="dropdown-item" href="profile_admin.php"><i class="bi bi-person me-2"></i>Profile</a></li>
+                <li><a class="dropdown-item" href="index.php"><i class="bi bi-globe me-2"></i>Katalog Publik</a></li>
                 <li><hr class="dropdown-divider"></li>
                 <li><a class="dropdown-item" href="logout.php"><i class="bi bi-box-arrow-right me-2"></i>Keluar</a></li>
             </ul>
@@ -707,7 +738,16 @@ $total_aktif   = $conn->query("SELECT COUNT(DISTINCT id_user) AS c FROM peminjam
             <div class="nav-item"><a href="anggota.php" class="nav-link active"><i class="bi bi-people"></i><span>Anggota</span></a></div>
             <div class="nav-item"><a href="peminjaman.php" class="nav-link"><i class="bi bi-clock-history"></i><span>Peminjaman</span></a></div>
             <div class="nav-item"><a href="pengembalian.php" class="nav-link"><i class="bi bi-arrow-return-left"></i><span>Pengembalian</span></a></div>
-            <div class="nav-item"><a href="persetujuan_admin.php" class="nav-link"><i class="bi bi-check2-square"></i><span>Persetujuan</span></a></div>
+            <div class="nav-item">
+                <a href="persetujuan_admin.php" class="nav-link d-flex align-items-center justify-content-between">
+                    <div class="d-flex align-items-center gap-2">
+                        <i class="bi bi-check2-square"></i><span>Persetujuan</span>
+                    </div>
+                    <?php if (!empty($menunggu_acc) && $menunggu_acc > 0): ?>
+                        <span class="badge-notif-sidebar"><?= $menunggu_acc ?></span>
+                    <?php endif; ?>
+                </a>
+            </div>
         </div>
         <div class="sidebar-section">
             <div class="sidebar-title">Lainnya</div>
@@ -723,7 +763,12 @@ $total_aktif   = $conn->query("SELECT COUNT(DISTINCT id_user) AS c FROM peminjam
                 </a>
             </div>
             <div class="nav-item">
-                <a href="logout.php" class="nav-link">
+                <a href="index.php" class="nav-link">
+                    <i class="bi bi-globe"></i><span>Katalog Publik</span>
+                </a>
+            </div>
+            <div class="nav-item">
+                <a href="logout.php" class="nav-link text-danger">
                     <i class="bi bi-box-arrow-left"></i><span>Keluar</span>
                 </a>
             </div>
@@ -792,6 +837,7 @@ $total_aktif   = $conn->query("SELECT COUNT(DISTINCT id_user) AS c FROM peminjam
                         <tr>
                             <th>No</th>
                             <th>Anggota</th>
+                            <th>NIS</th>
                             <th>Username</th>
                             <th>Email</th>
                             <th>No. HP</th>
@@ -813,9 +859,18 @@ $total_aktif   = $conn->query("SELECT COUNT(DISTINCT id_user) AS c FROM peminjam
                                     <div class="avatar-circle"><?= htmlspecialchars($inisial) ?></div>
                                     <div>
                                         <div style="font-weight:600;"><?= htmlspecialchars($row['nama']) ?></div>
-                                        <div style="font-size:0.75rem;color:#94a3b8;">ID User : <?= $no - 1 ?></div>
+                                        <div style="font-size:0.75rem;color:#94a3b8;">ID User : <?= $row['id_user'] ?></div>
                                     </div>
                                 </div>
+                            </td>
+                            <td>
+                                <?php if (!empty($row['nis'])): ?>
+                                    <span class="badge bg-light text-dark border font-monospace" style="font-size:0.78rem;">
+                                        <i class="bi bi-card-text me-1 text-primary"></i><?= htmlspecialchars($row['nis']) ?>
+                                    </span>
+                                <?php else: ?>
+                                    <span class="text-muted" style="font-size:0.8rem;">-</span>
+                                <?php endif; ?>
                             </td>
                             <td><?= htmlspecialchars($row['username']) ?></td>
                             <td><?= htmlspecialchars($row['email'] ?? '-') ?></td>
@@ -833,7 +888,7 @@ $total_aktif   = $conn->query("SELECT COUNT(DISTINCT id_user) AS c FROM peminjam
                             <td>
                                 <div style="display:flex;gap:0.4rem;flex-wrap:wrap;">
                                     <button class="btn-action btn-edit"
-                                        onclick="bukaModalEdit(<?= $row['id_user'] ?>, '<?= addslashes($row['nama']) ?>', '<?= addslashes($row['username']) ?>', '<?= addslashes($row['email'] ?? '') ?>', '<?= addslashes($row['alamat'] ?? '') ?>', '<?= addslashes($row['no_hp'] ?? '') ?>')"
+                                        onclick="bukaModalEdit(<?= $row['id_user'] ?>, '<?= addslashes($row['nama']) ?>', '<?= addslashes($row['nis'] ?? '') ?>', '<?= addslashes($row['username']) ?>', '<?= addslashes($row['email'] ?? '') ?>', '<?= addslashes($row['alamat'] ?? '') ?>', '<?= addslashes($row['no_hp'] ?? '') ?>')"
                                         data-bs-toggle="modal" data-bs-target="#modalEdit">
                                         <i class="bi bi-pencil"></i> Edit
                                     </button>
@@ -845,7 +900,7 @@ $total_aktif   = $conn->query("SELECT COUNT(DISTINCT id_user) AS c FROM peminjam
                             </td>
                         </tr>
                     <?php endwhile; else: ?>
-                        <tr><td colspan="8">
+                        <tr><td colspan="9">
                             <div class="empty-state">
                                 <i class="bi bi-people"></i>
                                 <h5>Tidak Ada Data Anggota</h5>
@@ -878,6 +933,10 @@ $total_aktif   = $conn->query("SELECT COUNT(DISTINCT id_user) AS c FROM peminjam
                             <input type="text" name="nama" class="form-control" placeholder="Masukkan nama lengkap" required>
                         </div>
                         <div class="col-md-6">
+                            <label class="form-label"><i class="bi bi-card-text me-1"></i>NIS (Nomor Induk Siswa)</label>
+                            <input type="text" name="nis" class="form-control" placeholder="Contoh: 20240001">
+                        </div>
+                        <div class="col-md-6">
                             <label class="form-label"><i class="bi bi-at me-1"></i>Username</label>
                             <input type="text" name="username" class="form-control" placeholder="Username unik" required>
                         </div>
@@ -885,15 +944,15 @@ $total_aktif   = $conn->query("SELECT COUNT(DISTINCT id_user) AS c FROM peminjam
                             <label class="form-label"><i class="bi bi-lock me-1"></i>Password</label>
                             <input type="text" name="password" class="form-control" placeholder="Password" required>
                         </div>
-                        <div class="col-12">
-                            <label class="form-label"><i class="bi bi-envelope me-1"></i>Email</label>
-                            <input type="email" name="email" class="form-control" placeholder="email@contoh.com">
-                        </div>
                         <div class="col-md-6">
                             <label class="form-label"><i class="bi bi-phone me-1"></i>No. HP</label>
                             <input type="text" name="no_hp" class="form-control" placeholder="08xxxxxxxxxx">
                         </div>
-                        <div class="col-md-6">
+                        <div class="col-12">
+                            <label class="form-label"><i class="bi bi-envelope me-1"></i>Email</label>
+                            <input type="email" name="email" class="form-control" placeholder="email@contoh.com">
+                        </div>
+                        <div class="col-12">
                             <label class="form-label"><i class="bi bi-geo-alt me-1"></i>Alamat</label>
                             <input type="text" name="alamat" class="form-control" placeholder="Alamat lengkap">
                         </div>
@@ -926,6 +985,10 @@ $total_aktif   = $conn->query("SELECT COUNT(DISTINCT id_user) AS c FROM peminjam
                             <input type="text" name="nama" id="edit_nama" class="form-control" required>
                         </div>
                         <div class="col-md-6">
+                            <label class="form-label"><i class="bi bi-card-text me-1"></i>NIS (Nomor Induk Siswa)</label>
+                            <input type="text" name="nis" id="edit_nis" class="form-control">
+                        </div>
+                        <div class="col-md-6">
                             <label class="form-label"><i class="bi bi-at me-1"></i>Username</label>
                             <input type="text" name="username" id="edit_username" class="form-control" required>
                         </div>
@@ -933,15 +996,15 @@ $total_aktif   = $conn->query("SELECT COUNT(DISTINCT id_user) AS c FROM peminjam
                             <label class="form-label"><i class="bi bi-lock me-1"></i>Password Baru</label>
                             <input type="text" name="password" id="edit_password" class="form-control" placeholder="Kosongkan jika tidak diubah">
                         </div>
-                        <div class="col-12">
-                            <label class="form-label"><i class="bi bi-envelope me-1"></i>Email</label>
-                            <input type="email" name="email" id="edit_email" class="form-control">
-                        </div>
                         <div class="col-md-6">
                             <label class="form-label"><i class="bi bi-phone me-1"></i>No. HP</label>
                             <input type="text" name="no_hp" id="edit_no_hp" class="form-control">
                         </div>
-                        <div class="col-md-6">
+                        <div class="col-12">
+                            <label class="form-label"><i class="bi bi-envelope me-1"></i>Email</label>
+                            <input type="email" name="email" id="edit_email" class="form-control">
+                        </div>
+                        <div class="col-12">
                             <label class="form-label"><i class="bi bi-geo-alt me-1"></i>Alamat</label>
                             <input type="text" name="alamat" id="edit_alamat" class="form-control">
                         </div>
@@ -967,9 +1030,10 @@ $total_aktif   = $conn->query("SELECT COUNT(DISTINCT id_user) AS c FROM peminjam
         }
     });
 
-    function bukaModalEdit(id, nama, username, email, alamat, no_hp) {
+    function bukaModalEdit(id, nama, nis, username, email, alamat, no_hp) {
         document.getElementById('edit_id_user').value  = id;
         document.getElementById('edit_nama').value     = nama;
+        document.getElementById('edit_nis').value      = nis;
         document.getElementById('edit_username').value = username;
         document.getElementById('edit_email').value    = email;
         document.getElementById('edit_alamat').value   = alamat;
